@@ -1,0 +1,41 @@
+{
+  "name": "mt-city",
+  "private": true,
+  "type": "module",
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "postinstall": "npm run build -w @mt/shared && npm run db:generate -w server",
+    "dev": "concurrently -n shared,client,server -c magenta,cyan,green \"npm run dev -w @mt/shared\" \"npm run dev -w client\" \"npm run dev -w server\"",
+    "build": "npm run build -w @mt/shared && npm run build -w client && npm run build -w server",
+    "test": "npm run test -w @mt/shared",
+    "typecheck": "npm run typecheck -w client && npm run typecheck -w server",
+    "lint": "eslint .",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "db:setup": "npm run db:migrate -w server -- --name init && npm run db:seed -w server"
+  },
+  "devDependencies": {
+    "@eslint/js": "^9.39.5",
+    "concurrently": "^10.0.6",
+    "eslint": "^9.39.5",
+    "eslint-config-prettier": "^10.1.8",
+    "eslint-plugin-react-hooks": "^7.1.1",
+    "eslint-plugin-react-refresh": "^0.5.7",
+    "globals": "^17.13.0",
+    "prettier": "^3.9.10",
+    "typescript": "~5.9",
+    "typescript-eslint": "^8.72.0"
+  },
+  "allowScripts": {
+    "better-sqlite3": true,
+    "esbuild": true,
+    "prisma": true,
+    "@prisma/engines": true
+  }
+}

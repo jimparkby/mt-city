@@ -1,0 +1,7 @@
+node_modules
+dist
+dev-dist
+apps/server/src/generated
+apps/server/prisma/migrations
+package-lock.json
+*.tmj

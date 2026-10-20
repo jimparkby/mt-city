@@ -1,0 +1,22 @@
+{
+  "app.title": "МТ Сити",
+  "hud.balance": "MTcoin",
+  "common.close": "Закрыть",
+  "common.inProgress": "Экран в разработке",
+  "onboarding.title": "Добро пожаловать в МТ Сити!",
+  "onboarding.name": "Как тебя зовут?",
+  "onboarding.age": "Сколько тебе лет?",
+  "onboarding.start": "Начать",
+  "onboarding.choosePath": "С чего начнём?",
+  "onboarding.business": "Открыть свой бизнес",
+  "onboarding.job": "Устроиться на работу",
+  "bank.title": "МТБанк",
+  "bank.account": "Счёт",
+  "bank.deposits": "Копилка",
+  "bank.loans": "Кредиты",
+  "bank.creditScore": "Кредитный рейтинг",
+  "bank.empty": "Пока пусто",
+  "shop.title": "Магазин",
+  "shop.bulk": "от {qty} шт — {price}",
+  "dev.timeSkip": "+1 день"
+}

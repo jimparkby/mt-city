@@ -1,0 +1,165 @@
+// Модель данных (ТЗ, раздел 6). Суммы — Int в копейках MTcoin, ставки — в bp (1% = 100).
+
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+  moduleFormat         = "esm"
+  importFileExtension  = "js"
+}
+
+datasource db {
+  provider = "sqlite"
+}
+
+model Player {
+  id           String           @id @default(cuid())
+  mobyUserId   String?          @unique // id из Moby, null в mock
+  parentId     String?
+  name         String
+  age          Int
+  mode         String // "junior" | "teen"
+  bankLevel    Int              @default(1)
+  knowledge    Int              @default(0) // Очки знаний
+  energy       Int              @default(100)
+  health       Int              @default(100)
+  creditScore  Int              @default(600) // 300–850
+  insured      Boolean          @default(false)
+  onboardedAt  DateTime?
+  lastTickAt   DateTime         @default(now())
+  createdAt    DateTime         @default(now())
+  account      Account?
+  deposits     Deposit[]
+  loans        Loan[]
+  business     Business?
+  inventory    InventoryItem[]
+  buildings    PlayerBuilding[]
+  lessons      LessonProgress[]
+  transactions Transaction[]
+  tasks        ParentTask[]
+}
+
+model Account {
+  id        String @id @default(cuid())
+  playerId  String @unique
+  balance   Int    @default(10000) // 100,00 MTcoin стартовых
+  walletCap Int    @default(50000)
+  player    Player @relation(fields: [playerId], references: [id], onDelete: Cascade)
+}
+
+model Deposit {
+  id        String    @id @default(cuid())
+  playerId  String
+  type      String // "demand" | "term"
+  principal Int
+  rateBp    Int // ставка за игровой день
+  startedAt DateTime  @default(now())
+  endsAt    DateTime? // для срочного
+  closedAt  DateTime?
+  player    Player    @relation(fields: [playerId], references: [id], onDelete: Cascade)
+}
+
+model Loan {
+  id          String   @id @default(cuid())
+  playerId    String
+  principal   Int
+  rateBp      Int // ставка за период
+  periods     Int
+  payment     Int // аннуитетный платёж
+  paidPeriods Int      @default(0)
+  nextDueAt   DateTime
+  overdue     Int      @default(0)
+  purpose     String // "equipment" | ...
+  player      Player   @relation(fields: [playerId], references: [id], onDelete: Cascade)
+}
+
+model Business {
+  id         String    @id @default(cuid())
+  playerId   String    @unique
+  type       String // "coffee" | "lemonade" | ...
+  name       String
+  legalForm  String? // "self" | "ip" | null до регистрации
+  price      Int // цена продажи за единицу
+  level      Int       @default(1)
+  prodQty    Int       @default(0)
+  prodEndsAt DateTime?
+  player     Player    @relation(fields: [playerId], references: [id], onDelete: Cascade)
+}
+
+model Shop {
+  id       String    @id // "sosedi", "green", "cofix"...
+  name     String
+  category String
+  district String
+  products Product[]
+}
+
+model Product {
+  id         String @id @default(cuid())
+  shopId     String
+  sku        String // "apple", "coffee_beans"
+  name       String
+  price      Int
+  bulkMinQty Int?
+  bulkPrice  Int?
+  shelfLife  Int? // игровых дней
+  demandBase Int    @default(20) // Q_base для спроса на рынке
+  refPrice   Int? // P_ref, рыночная цена
+  shop       Shop   @relation(fields: [shopId], references: [id])
+
+  @@unique([shopId, sku])
+}
+
+model InventoryItem {
+  id        String    @id @default(cuid())
+  playerId  String
+  sku       String
+  qty       Int
+  unitCost  Int // для расчёта себестоимости
+  expiresAt DateTime?
+  player    Player    @relation(fields: [playerId], references: [id], onDelete: Cascade)
+}
+
+model PlayerBuilding {
+  id            String    @id @default(cuid())
+  playerId      String
+  buildingId    String // "bank", "warehouse"...
+  level         Int       @default(1)
+  upgradeEndsAt DateTime?
+  player        Player    @relation(fields: [playerId], references: [id], onDelete: Cascade)
+
+  @@unique([playerId, buildingId])
+}
+
+model LessonProgress {
+  id       String @id @default(cuid())
+  playerId String
+  lessonId String // "buy_sell", "deposit"...
+  status   String // "started" | "done"
+  score    Int?
+  player   Player @relation(fields: [playerId], references: [id], onDelete: Cascade)
+
+  @@unique([playerId, lessonId])
+}
+
+model Transaction {
+  id        String   @id @default(cuid())
+  playerId  String
+  amount    Int // + приход, − расход
+  kind      String // "salary" | "purchase" | "sale" | "interest" | "tax" | "loan" ...
+  meta      String? // JSON
+  createdAt DateTime @default(now())
+  player    Player   @relation(fields: [playerId], references: [id], onDelete: Cascade)
+
+  @@index([playerId, createdAt])
+}
+
+model ParentTask {
+  id         String   @id @default(cuid())
+  playerId   String
+  title      String
+  rewardByn  Int // в копейках BYN, реальная выплата через Moby
+  rewardCoin Int
+  status     String // "open" | "done" | "approved"
+  createdAt  DateTime @default(now())
+  player     Player   @relation(fields: [playerId], references: [id], onDelete: Cascade)
+}
