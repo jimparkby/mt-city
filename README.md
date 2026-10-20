@@ -108,3 +108,9 @@ packages/shared/  типы, Zod-схемы, формулы экономики, �
 
 Изометрические паки [Kenney](https://kenney.nl/assets/tag:isometric) (CC0), иконки — Lucide или Phosphor.
 Карту рисуем в [Tiled](https://www.mapeditor.org/) (изометрия, `.tmj`) → `apps/client/public/assets/maps/city.tmj`.
+
+## Вход и демо-режим
+
+- **Регистрации нет.** Игрок приходит из Moby: клиент берёт одноразовый токен `moby.getAuthToken()`, сервер меняет его на профиль ребёнка (`POST /auth/session`). В mock-режиме это демо-профиль «Алиса, 10 лет» (`MOCK_MOBY_PROFILE` в `@mt/shared`).
+- **Демо-режим без сервера и БД.** Если в клиенте не задан `VITE_API_URL`, все запросы обрабатываются в браузере (`apps/client/src/api/demo.ts`) по тем же формулам из `@mt/shared`, состояние хранится в `localStorage`. Так работает деплой на Vercel: https://mt-city.vercel.app. Новые эндпоинты добавляйте и на сервер, и в `demo.ts`.
+- Сбросить демо-прогресс: DevTools → Application → Local Storage → удалить `mt-city:demo-state`.

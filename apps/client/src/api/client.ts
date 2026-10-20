@@ -1,7 +1,9 @@
 import type { ApiError } from '@mt/shared';
 import { useSession } from '../store/session';
 
-const BASE = import.meta.env.VITE_API_URL ?? 'http://localhost:3000/api/v1';
+/** Адрес сервера. Не задан → демо-режим: всё считается в браузере (src/api/demo.ts), сервер и БД не нужны. */
+const BASE = import.meta.env.VITE_API_URL;
+export const isDemoMode = !BASE;
 
 export class ApiRequestError extends Error {
     constructor(
@@ -14,9 +16,16 @@ export class ApiRequestError extends Error {
 }
 
 export async function api<T>(path: string, init: { method?: string; body?: unknown } = {}): Promise<T> {
+    const method = init.method ?? (init.body !== undefined ? 'POST' : 'GET');
+
+    if (isDemoMode) {
+        const { demoApi } = await import('./demo');
+        return demoApi<T>(method, path, init.body);
+    }
+
     const token = useSession.getState().token;
     const res = await fetch(`${BASE}${path}`, {
-        method: init.method ?? (init.body ? 'POST' : 'GET'),
+        method,
         headers: {
             ...(init.body !== undefined ? { 'Content-Type': 'application/json' } : {}),
             ...(token ? { Authorization: `Bearer ${token}` } : {}),

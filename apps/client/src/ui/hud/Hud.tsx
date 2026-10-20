@@ -1,4 +1,5 @@
 import { useDevTimeSkip, useMe } from '../../api/hooks';
+import { isDemoMode } from '../../api/client';
 import { t } from '../../i18n';
 import { Coins } from '../components/Coins';
 
@@ -21,7 +22,7 @@ export function Hud() {
             <div className="hud-item" title="Уровень банка">
                 🏦 {me.bankLevel}
             </div>
-            {import.meta.env.DEV && (
+            {(import.meta.env.DEV || isDemoMode) && (
                 <button className="hud-item hud-dev" onClick={() => timeSkip.mutate(1)}>
                     {t('dev.timeSkip')}
                 </button>

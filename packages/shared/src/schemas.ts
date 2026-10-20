@@ -4,10 +4,9 @@ import { z } from 'zod';
 
 const coins = z.number().int().positive();
 
+/** Регистрации нет: игрок приходит из Moby, сервер узнаёт его по одноразовому токену */
 export const AuthSessionBody = z.object({
-    mobyToken: z.string().min(1).optional(),
-    name: z.string().trim().min(1).max(32).optional(),
-    age: z.number().int().min(6).max(17).optional(),
+    mobyToken: z.string().min(1),
 });
 
 export const OnboardingCompleteBody = z.object({

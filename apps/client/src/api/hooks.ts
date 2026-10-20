@@ -9,6 +9,7 @@ import type {
     ShopDto,
 } from '@mt/shared';
 import { emit } from '../game/EventBus';
+import { moby } from '../moby';
 import { useSession } from '../store/session';
 import { api } from './client';
 
@@ -36,11 +37,15 @@ export function useProducts(shopId: string) {
     return useQuery({ queryKey: keys.products(shopId), queryFn: () => api<ProductDto[]>(`/shops/${shopId}/products`) });
 }
 
-export function useCreateSession() {
+/** Вход через Moby: токен берём у моста, сервер узнаёт по нему ребёнка. Формы регистрации нет. */
+export function useMobyLogin() {
     const qc = useQueryClient();
     const setToken = useSession((s) => s.setToken);
     return useMutation({
-        mutationFn: (body: AuthSessionBody) => api<SessionDto>('/auth/session', { body }),
+        mutationFn: async () => {
+            const body: AuthSessionBody = { mobyToken: await moby.getAuthToken() };
+            return api<SessionDto>('/auth/session', { body });
+        },
         onSuccess: ({ sessionToken, player }) => {
             setToken(sessionToken);
             qc.setQueryData(keys.me, player);
