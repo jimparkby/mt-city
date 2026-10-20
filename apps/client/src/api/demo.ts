@@ -1,10 +1,11 @@
 // Демо-режим без сервера и БД: те же эндпоинты, что у apps/server, но считаются в браузере
-// по формулам @mt/shared, а состояние живёт в localStorage. Включается, когда VITE_API_URL не задан
-// (так работает деплой на Vercel). В пилоте деньги считает только сервер.
+// по формулам и редьюсерам из @mt/shared, а состояние живёт в localStorage. Включается, когда VITE_API_URL
+// не задан (так работает деплой на Vercel). В пилоте деньги считает только сервер.
 
 import {
     BUILDINGS,
     DAY_MS_DEFAULT,
+    DevTimeSkipBody,
     ENERGY,
     HOUR_MS_FACTOR,
     JOBS,
@@ -14,14 +15,17 @@ import {
     OnboardingCompleteBody,
     SHOP_CATALOG,
     START,
-    DevTimeSkipBody,
+    applyGameAction,
     daysElapsed,
     depositAmount,
+    initialGame,
     loanLimit,
     loanQuote,
     salaryAfterTax,
     type BankOverviewDto,
     type DepositDto,
+    type GameAction,
+    type GameState,
     type LoanDto,
     type PlayerDto,
     type ProductDto,
@@ -31,11 +35,13 @@ import {
 import type { z } from 'zod';
 import { ApiRequestError } from './client';
 
-const KEY = 'mt-city:demo-state';
+const KEY = 'mt-city:demo-state:v2';
 const DAY_MS = DAY_MS_DEFAULT;
 
 interface DemoState {
-    player: PlayerDto;
+    game: GameState;
+    energy: number;
+    onboarded: boolean;
     deposits: Omit<DepositDto, 'current'>[];
     loans: LoanDto[];
     transactions: TransactionDto[];
@@ -52,25 +58,31 @@ function now(s: DemoState) {
 
 function freshState(): DemoState {
     return {
-        player: {
-            id: 'demo-player',
-            name: MOCK_MOBY_PROFILE.name,
-            age: MOCK_MOBY_PROFILE.age,
-            mode: MOCK_MOBY_PROFILE.age < 12 ? 'junior' : 'teen',
-            bankLevel: 1,
-            knowledge: 0,
-            energy: START.energy,
-            health: START.health,
-            creditScore: START.creditScore,
-            onboarded: false,
-            account: { balance: START.balance, walletCap: START.walletCap },
-            buildings: BUILDINGS.map((b) => ({ buildingId: b.id, level: 1, upgradeEndsAt: null })),
-        },
+        game: initialGame(),
+        energy: START.energy,
+        onboarded: true,
         deposits: [],
         loans: [],
         transactions: [],
         timeOffset: 0,
         lastTickAt: Date.now(),
+    };
+}
+
+function toPlayer(s: DemoState): PlayerDto {
+    return {
+        id: 'demo-player',
+        name: MOCK_MOBY_PROFILE.name,
+        age: MOCK_MOBY_PROFILE.age,
+        mode: MOCK_MOBY_PROFILE.age < 12 ? 'junior' : 'teen',
+        bankLevel: s.game.level,
+        knowledge: s.game.knowledge,
+        energy: s.energy,
+        health: START.health,
+        creditScore: START.creditScore,
+        onboarded: s.onboarded,
+        account: { balance: s.game.coins, walletCap: START.walletCap },
+        buildings: BUILDINGS.map((b) => ({ buildingId: b.id, level: 1, upgradeEndsAt: null })),
     };
 }
 
@@ -99,14 +111,12 @@ function tick(s: DemoState) {
     const hourMs = DAY_MS / HOUR_MS_FACTOR;
     const hours = Math.floor((now(s) - s.lastTickAt) / hourMs);
     if (hours <= 0) return;
-    s.player.energy = Math.min(ENERGY.max, s.player.energy + hours * ENERGY.regenPerHour);
+    s.energy = Math.min(ENERGY.max, s.energy + hours * ENERGY.regenPerHour);
     s.lastTickAt += hours * hourMs;
 }
 
-function addMoney(s: DemoState, amount: number, kind: string, meta?: Record<string, unknown>) {
-    const balance = s.player.account.balance + amount;
-    if (balance < 0) throw new ApiRequestError(409, 'INSUFFICIENT_FUNDS', 'Недостаточно средств');
-    s.player.account.balance = balance;
+function logTransaction(s: DemoState, amount: number, kind: string, meta?: Record<string, unknown>) {
+    if (amount === 0) return;
     s.transactions.unshift({
         id: crypto.randomUUID(),
         amount,
@@ -114,6 +124,12 @@ function addMoney(s: DemoState, amount: number, kind: string, meta?: Record<stri
         meta: meta ?? null,
         createdAt: new Date(now(s)).toISOString(),
     });
+}
+
+function addCoins(s: DemoState, amount: number, kind: string, meta?: Record<string, unknown>) {
+    if (s.game.coins + amount < 0) throw new ApiRequestError(409, 'INSUFFICIENT_FUNDS', 'Недостаточно средств');
+    s.game = { ...s.game, coins: s.game.coins + amount };
+    logTransaction(s, amount, kind, meta);
 }
 
 function parse<T extends z.ZodType>(schema: T, data: unknown): z.infer<T> {
@@ -125,18 +141,30 @@ function parse<T extends z.ZodType>(schema: T, data: unknown): z.infer<T> {
 type Handler = (s: DemoState, body: unknown, params: string[]) => unknown;
 
 const routes: [method: string, pattern: RegExp, handler: Handler][] = [
-    ['POST', /^\/auth\/session$/, (s): SessionDto => ({ sessionToken: 'demo', player: s.player })],
-    ['GET', /^\/player\/me$/, (s) => s.player],
+    ['POST', /^\/auth\/session$/, (s): SessionDto => ({ sessionToken: 'demo', player: toPlayer(s) })],
+    ['GET', /^\/player\/me$/, (s) => toPlayer(s)],
     [
         'POST',
         /^\/onboarding\/complete$/,
         (s, body) => {
             const { path } = parse(OnboardingCompleteBody, body);
-            if (!s.player.onboarded) {
-                s.player.onboarded = true;
-                addMoney(s, START.onboardingBonus, 'bonus', { reason: 'onboarding', path });
+            if (!s.onboarded) {
+                s.onboarded = true;
+                addCoins(s, START.onboardingBonus, 'bonus', { reason: 'onboarding', path });
             }
-            return s.player;
+            return toPlayer(s);
+        },
+    ],
+    ['GET', /^\/game$/, (s) => s.game],
+    [
+        'POST',
+        /^\/game\/action$/,
+        (s, body) => {
+            const action = body as GameAction;
+            const before = s.game.coins;
+            s.game = applyGameAction(s.game, action);
+            logTransaction(s, s.game.coins - before, 'reward', { action: action.type });
+            return s.game;
         },
     ],
     ['GET', /^\/transactions/, (s) => s.transactions.slice(0, 50)],
@@ -144,8 +172,8 @@ const routes: [method: string, pattern: RegExp, handler: Handler][] = [
         'GET',
         /^\/bank\/overview$/,
         (s): BankOverviewDto => ({
-            account: s.player.account,
-            creditScore: s.player.creditScore,
+            account: toPlayer(s).account,
+            creditScore: START.creditScore,
             deposits: s.deposits
                 .filter((d) => !d.closedAt)
                 .map((d) => ({
@@ -158,11 +186,11 @@ const routes: [method: string, pattern: RegExp, handler: Handler][] = [
     [
         'POST',
         /^\/bank\/loans\/quote$/,
-        (s, body) => {
+        (_s, body) => {
             const { amount, periods } = parse(LoanQuoteBody, body);
             const limit = loanLimit(null);
             if (amount > limit) throw new ApiRequestError(400, 'VALIDATION', 'Сумма больше лимита');
-            const quote = loanQuote(amount, periods, s.player.creditScore);
+            const quote = loanQuote(amount, periods, START.creditScore);
             if (!quote) throw new ApiRequestError(403, 'LEVEL_LOCKED', 'Банк отказал: низкий кредитный рейтинг');
             return { ...quote, limit };
         },
@@ -203,7 +231,7 @@ const routes: [method: string, pattern: RegExp, handler: Handler][] = [
             const { days } = parse(DevTimeSkipBody, body);
             s.timeOffset += days * DAY_MS;
             tick(s);
-            return s.player;
+            return toPlayer(s);
         },
     ],
     [
@@ -211,7 +239,7 @@ const routes: [method: string, pattern: RegExp, handler: Handler][] = [
         /^\/dev\/reset$/,
         (s) => {
             Object.assign(s, freshState());
-            return s.player;
+            return toPlayer(s);
         },
     ],
 ];

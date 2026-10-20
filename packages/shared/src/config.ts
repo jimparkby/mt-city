@@ -78,16 +78,17 @@ export interface BuildingDef {
     minBankLevel: number;
 }
 
+/** Здания города в порядке показа; minBankLevel — уровень игрока, с которого открывается */
 export const BUILDINGS: BuildingDef[] = [
     { id: 'bank', name: 'Офис МТБанка', minBankLevel: 1 },
     { id: 'sosedi', name: 'Соседи', minBankLevel: 1 },
     { id: 'green', name: 'Грин', minBankLevel: 1 },
     { id: 'cofix', name: 'Cofix', minBankLevel: 1 },
-    { id: 'legal', name: 'Юрцентр', minBankLevel: 1 },
-    { id: 'medical', name: 'Медцентр', minBankLevel: 1 },
-    { id: 'market', name: 'Рынок', minBankLevel: 1 },
     { id: 'jobs', name: 'Биржа труда', minBankLevel: 1 },
-    { id: 'plot', name: 'Мой участок', minBankLevel: 1 },
+    { id: 'medical', name: 'Медцентр', minBankLevel: 2 },
+    { id: 'plot', name: 'Мой участок', minBankLevel: 2 },
+    { id: 'market', name: 'Рынок', minBankLevel: 4 },
+    { id: 'legal', name: 'Юрцентр', minBankLevel: 5 },
 ];
 
 export interface JobDef {

@@ -1,23 +1,24 @@
 import { useEffect, useRef } from 'react';
-import { useMe, useMobyLogin } from './api/hooks';
-import { on } from './game/EventBus';
-import { IRefPhaserGame, PhaserGame } from './PhaserGame';
+import { useDevReset, useGame, useMe, useMobyLogin } from './api/hooks';
+import { isDemoMode } from './api/client';
+import { t } from './i18n';
 import { moby } from './moby';
 import { MobyMockModal } from './moby/MobyMockModal';
-import { useSession } from './store/session';
-import { Hud } from './ui/hud/Hud';
-import { ScreenHost } from './ui/ScreenHost';
-import { Modal } from './ui/components/Modal';
-import { Onboarding } from './ui/screens/Onboarding';
-import { t } from './i18n';
+import { useUi } from './store/ui';
+import { ChildHome } from './ui/child/ChildHome';
+import { ChildOverlays } from './ui/child/Overlays';
+import { ChildSheets } from './ui/child/Sheets';
+import { ParentHome } from './ui/parent/ParentHome';
 
 function App() {
-    //  References to the PhaserGame component (game and scene are exposed)
-    const phaserRef = useRef<IRefPhaserGame | null>(null);
-    const open = useSession((s) => s.open);
-    const { data: me } = useMe();
     const login = useMobyLogin();
     const loginStarted = useRef(false);
+    const { data: me } = useMe();
+    const { data: game } = useGame();
+    const role = useUi((s) => s.role);
+    const setRole = useUi((s) => s.setRole);
+    const toast = useUi((s) => s.toast);
+    const reset = useDevReset();
 
     // При каждом запуске входим по свежему токену Moby (он одноразовый)
     useEffect(() => {
@@ -26,40 +27,59 @@ function App() {
         login.mutate();
     }, [login]);
 
-    // Тап по зданию в Phaser → открыть React-экран
-    useEffect(() => on('building:open', ({ id }) => open(id)), [open]);
-
-    // Android «назад»: закрыть экран, а если экранов нет — вернуться в Moby
+    // Android «назад»: закрыть шторку/оверлей, иначе — вернуться в Moby
     useEffect(() => {
         const onPop = () => {
-            const { screen, close } = useSession.getState();
-            if (screen) {
-                close();
-                history.pushState(null, '');
-            } else {
-                moby.close();
-            }
+            const ui = useUi.getState();
+            if (ui.overlay) ui.closeOverlay();
+            else if (ui.sheet) ui.closeSheet();
+            else return moby.close();
+            history.pushState(null, '');
         };
         history.pushState(null, '');
         window.addEventListener('popstate', onPop);
         return () => window.removeEventListener('popstate', onPop);
     }, []);
 
-    const needsOnboarding = me && !me.onboarded;
-
     return (
-        <div id="app">
-            <PhaserGame ref={phaserRef} />
-            <div className="ui-layer">
-                <Hud />
+        <div className="stage">
+            {isDemoMode && (
+                <div className="demo-bar">
+                    <div className="segmented">
+                        <button aria-pressed={role === 'child'} onClick={() => setRole('child')}>
+                            Ребёнок
+                        </button>
+                        <button aria-pressed={role === 'parent'} onClick={() => setRole('parent')}>
+                            Родитель
+                        </button>
+                    </div>
+                    <button className="link-button" onClick={() => reset.mutate()}>
+                        Сбросить демо
+                    </button>
+                </div>
+            )}
+            <div className="phone">
+                <div className="phone-status">
+                    <span>9:41</span>
+                    <span>МТ Сити</span>
+                </div>
                 {login.isError && (
-                    <Modal title={t('login.error')}>
-                        <button className="button" onClick={() => login.mutate()}>
+                    <div className="section">
+                        <p className="body">{t('login.error')}</p>
+                        <button className="btn" onClick={() => login.mutate()}>
                             {t('common.retry')}
                         </button>
-                    </Modal>
+                    </div>
                 )}
-                {needsOnboarding ? <Onboarding /> : <ScreenHost />}
+                {me && game && role === 'child' && (
+                    <>
+                        <ChildHome me={me} game={game} />
+                        <ChildSheets me={me} game={game} />
+                        <ChildOverlays game={game} />
+                    </>
+                )}
+                {me && game && role === 'parent' && <ParentHome me={me} game={game} />}
+                {toast && <div className="toast">{toast}</div>}
                 <MobyMockModal />
             </div>
         </div>
