@@ -1,13 +1,17 @@
 import { useEffect, useRef, useState } from 'react';
 import { CellSignalFullIcon, NavigationArrowIcon } from '@phosphor-icons/react';
-import { useDevReset, useGame, useMe, useMobyLogin } from './api/hooks';
+import { useDevReset, useGame, useGameAction, useMe, useMobyLogin } from './api/hooks';
 import { isDemoMode } from './api/client';
 import { t } from './i18n';
 import { moby } from './moby';
 import { MobyMockModal } from './moby/MobyMockModal';
 import { useUi, type Role } from './store/ui';
 import { BankChat, BankHome, BankMore, BankNav, BankProducts } from './ui/bank/BankScreens';
+import { ChildCard } from './ui/bank/ChildCard';
+import { ChildBankSheets } from './ui/bank/ChildSheets';
 import { Deposits } from './ui/bank/Deposits';
+import { NoAccess } from './ui/bank/NoAccess';
+import { Partners } from './ui/bank/Partners';
 import { Kopilka } from './ui/bank/Kopilka';
 import { resetCity } from './ui/child/cityState';
 import { Game, GameNav } from './ui/child/Game';
@@ -27,6 +31,7 @@ function App() {
     const { data: game } = useGame();
     const ui = useUi();
     const reset = useDevReset();
+    const action = useGameAction();
     const phone = useRef<HTMLDivElement>(null);
     // На компьютере телефон рисуется в рамке со статус-баром, на телефоне — на весь экран
     const framed = useMedia('(min-width: 600px)') && isDemoMode;
@@ -46,7 +51,8 @@ function App() {
             else if (s.overlay) s.closeOverlay();
             else if (s.sheet) s.closeSheet();
             else if (s.loc) s.closeLoc();
-            else if (s.kopOpen || s.depositsOpen) s.set({ kopOpen: false, depositsOpen: false });
+            else if (s.bankSheet) s.set({ bankSheet: null });
+            else if (s.page) s.set({ page: null });
             else if (s.bankTab === 'city' && s.tab !== 'city') s.setTab('city');
             else if (isDemoMode && s.bankTab !== 'home') s.goBank('home');
             else return moby.close();
@@ -61,8 +67,11 @@ function App() {
     const bankTab = isDemoMode ? ui.bankTab : 'city';
     const isParent = ui.role === 'parent';
     const teen = ui.role === 'teen';
-    const inGame = bankTab === 'city' && !isParent;
-    const showOnboarding = bankTab === 'city' && !ui.onboarded[ui.role] && !ui.overlay && !!game;
+    // Ребёнок попадает в Moby, только если родитель оформил пакет и разрешил вход
+    const locked = !isParent && !!game && (!game.pkg || !game.controls.childAccess);
+    const inGame = bankTab === 'city' && !isParent && !locked;
+    const showOnboarding =
+        bankTab === 'city' && !ui.onboarded[ui.role] && !ui.overlay && !!game && !locked && (!isParent || !!game.pkg);
     const statusBg =
         bankTab === 'home' ? '#2f62e6' : bankTab === 'city' ? (isParent ? '#2f6bf0' : '#0f1a46') : '#1a1b22';
 
@@ -82,8 +91,23 @@ function App() {
                         <button
                             className="family-toggle"
                             role="switch"
-                            aria-checked={ui.family}
-                            onClick={() => ui.set({ family: !ui.family })}
+                            aria-checked={!!game?.pkg}
+                            onClick={() =>
+                                action.mutate(
+                                    game?.pkg
+                                        ? { type: 'pkg/cancel' }
+                                        : {
+                                              type: 'pkg/issue',
+                                              pkg: {
+                                                  age: 'kid',
+                                                  card: 'physical',
+                                                  delivery: 'courier',
+                                                  marketing: true,
+                                              },
+                                              insurance: false,
+                                          },
+                                )
+                            }
                         >
                             <span className="toggle" />
                             Семья создана
@@ -130,13 +154,23 @@ function App() {
                 {me && game && (
                     <>
                         <div className="screen">
-                            {bankTab === 'home' && <BankHome game={game} />}
-                            {bankTab === 'products' && <BankProducts />}
-                            {bankTab === 'chat' && <BankChat />}
-                            {bankTab === 'more' && <BankMore />}
-                            {bankTab === 'city' && (isParent ? <ParentHome game={game} /> : <Game game={game} />)}
-                            {teen && ui.depositsOpen && <Deposits game={game} />}
-                            {teen && ui.kopOpen && <Kopilka game={game} />}
+                            {locked ? (
+                                <NoAccess game={game} />
+                            ) : (
+                                <>
+                                    {bankTab === 'home' && <BankHome game={game} />}
+                                    {bankTab === 'products' && <BankProducts game={game} />}
+                                    {bankTab === 'chat' && <BankChat />}
+                                    {bankTab === 'more' && <BankMore />}
+                                    {bankTab === 'city' &&
+                                        (isParent ? <ParentHome game={game} /> : <Game game={game} />)}
+                                    {teen && ui.page === 'deposits' && <Deposits game={game} />}
+                                    {!isParent && ui.page === 'kopilka' && <Kopilka game={game} />}
+                                    {!isParent && ui.page === 'card' && <ChildCard game={game} />}
+                                    {ui.page === 'partners' && <Partners game={game} />}
+                                    {!isParent && <ChildBankSheets game={game} />}
+                                </>
+                            )}
                             {ui.bankToast && <div className="toast top">{ui.bankToast}</div>}
                         </div>
                         {inGame ? <GameNav game={game} /> : <BankNav game={game} />}

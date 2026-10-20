@@ -1,5 +1,6 @@
 // Персонажи демо (макет v7): в пилоте имя, возраст и падежи придут из профиля Moby.
 
+import type { GameState } from '@mt/shared';
 import { useUi } from '../store/ui';
 
 export interface Child {
@@ -42,5 +43,5 @@ export const PARENT_NAME = 'Ольга';
 /** Подросток 14–17: без MTcoin, вместо них кешбэк и знания */
 export const useTeen = () => useUi((s) => s.role === 'teen');
 
-/** Ребёнок, которого видит родитель: зависит от выбранного возраста в Moby Семье */
-export const useFamilyChild = () => (useUi((s) => s.familyAge) === 'teen' ? TEEN : KID);
+/** Ребёнок, которого видит родитель: зависит от возраста в оформленном пакете Moby Семья */
+export const familyChild = (game: GameState) => (game.pkg?.age === 'teen' ? TEEN : KID);

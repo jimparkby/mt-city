@@ -34,11 +34,15 @@ import {
     UserIcon,
     UsersThreeIcon,
     WalletIcon,
+    HandCoinsIcon,
+    LockSimpleIcon,
+    StarIcon,
     type Icon,
 } from '@phosphor-icons/react';
 import { useUi, type BankTab } from '../../store/ui';
-import { byn } from '../format';
-import { KID, PARENT_NAME, TEEN, useFamilyChild } from '../roles';
+import { byn, when } from '../format';
+import { KID, PARENT_NAME, TEEN, familyChild } from '../roles';
+import { useGameAction } from '../../api/hooks';
 import { SKIN_LOOKS, TIER_LOOKS, fullBg } from '../art/avatar';
 
 const useNotInDemo = () => {
@@ -54,13 +58,13 @@ const useToCity = () => {
 
 export function BankHome({ game }: { game: GameState }) {
     const role = useUi((s) => s.role);
-    const family = useUi((s) => s.family);
+    const family = !!game.pkg;
     const hide = useUi((s) => s.hideBalance);
     const set = useUi((s) => s.set);
-    const famChild = useFamilyChild();
+    const flash = useUi((s) => s.flash);
+    const famChild = familyChild(game);
     const notInDemo = useNotInDemo();
     const toCity = useToCity();
-    const toProfile = () => set({ tab: 'profile', bankTab: 'city' });
     const isParent = role === 'parent',
         teen = role === 'teen';
     const child = teen ? TEEN : KID;
@@ -68,15 +72,21 @@ export function BankHome({ game }: { game: GameState }) {
         tier = CARD_TIERS[ti],
         next = CARD_TIERS[ti + 1];
     const reviewN = game.tasks.filter((t) => t.status === 'review').length;
+    const decideN =
+        game.ops.filter((o) => o.status === 'pending').length + game.requests.filter((r) => r.status === 'open').length;
+    const lastOp = game.ops[0];
+    const c = game.controls;
     const weekDone = weekQuests(game).filter((q) => q.done).length;
     const famTeen = famChild === TEEN;
 
     const banner = isParent
         ? !family
             ? 'Создайте семью, чтобы выпустить детскую карту'
-            : reviewN
-              ? `${famChild.name} ${famChild.did} задание — проверьте и переведите награду`
-              : 'Поставьте ребёнку новое задание'
+            : decideN
+              ? `${famChild.name} ждёт вашего решения: ${decideN}`
+              : reviewN
+                ? `${famChild.name} ${famChild.did} задание — проверьте и переведите награду`
+                : 'Поставьте ребёнку новое задание'
         : teen
           ? next
               ? `Ещё ${next.lvl - game.level} ур. — и кешбэк ${next.cb}% по карте`
@@ -97,17 +107,25 @@ export function BankHome({ game }: { game: GameState }) {
               value: `${byn(game.byn)} BYN`,
               art: fullBg(TIER_LOOKS[ti]),
               mark: 'MT',
-              tag: next ? `до ${next.cb}%` : '',
-              onTap: toProfile,
+              tag: c.blocked ? 'Заблокирована' : next ? `до ${next.cb}%` : '',
+              onTap: () => set({ page: 'card' }),
           }
         : {
               kicker: `Moby Kids · ${SHOP.card[game.skin].name}`,
               value: `${byn(game.byn)} BYN`,
               art: fullBg(SKIN_LOOKS[game.skin]),
               mark: 'MT',
-              tag: '',
-              onTap: toProfile,
+              tag: c.blocked ? 'Заблокирована' : '',
+              onTap: () => set({ page: 'card' }),
           };
+    const partnersCard: HomeCard = {
+        kicker: 'Партнёры и баллы',
+        value: `${isParent ? game.points.parent : game.points.child} баллов`,
+        art: 'linear-gradient(135deg,#ffd23f,#e0218a)',
+        mark: '★',
+        tag: '',
+        onTap: () => set({ page: 'partners' }),
+    };
     const cards: HomeCard[] = isParent
         ? [
               {
@@ -124,7 +142,7 @@ export function BankHome({ game }: { game: GameState }) {
                         value: `${byn(game.byn)} BYN`,
                         art: famTeen ? fullBg(TIER_LOOKS[ti]) : fullBg(SKIN_LOOKS[game.skin]),
                         mark: 'MT',
-                        tag: reviewN ? `${reviewN} на проверке` : '',
+                        tag: decideN || reviewN ? `${decideN + reviewN} ждут вас` : '',
                         onTap: toCity,
                     }
                   : {
@@ -135,19 +153,20 @@ export function BankHome({ game }: { game: GameState }) {
                         tag: 'Новое',
                         onTap: toCity,
                     },
+              partnersCard,
           ]
         : [
               kidCard,
+              {
+                  kicker: `Копилка · ${game.kop.name}`,
+                  value: `${byn(Math.round(game.kop.saved * 100))} из ${byn(Math.round(game.kop.target * 100))} BYN`,
+                  art: 'linear-gradient(135deg,#3ecf6e,#1d6b3a)',
+                  mark: '',
+                  tag: game.kop.planned ? '' : 'План',
+                  onTap: () => set({ page: 'kopilka' }),
+              },
               ...(teen
                   ? [
-                        {
-                            kicker: `Копилка · ${game.kop.name}`,
-                            value: `${byn(Math.round(game.kop.saved * 100))} из ${byn(Math.round(game.kop.target * 100))} BYN`,
-                            art: 'linear-gradient(135deg,#3ecf6e,#1d6b3a)',
-                            mark: '',
-                            tag: game.kop.planned ? '' : 'План',
-                            onTap: () => set({ kopOpen: true }),
-                        },
                         {
                             kicker: 'Вклады в BYN',
                             value: game.deposits.length
@@ -156,17 +175,34 @@ export function BankHome({ game }: { game: GameState }) {
                             art: 'linear-gradient(135deg,#ff9a3d 0%,#e0218a 100%)',
                             mark: '%',
                             tag: game.deposits.length ? '' : 'Новое',
-                            onTap: () => set({ depositsOpen: true }),
+                            onTap: () => set({ page: 'deposits' }),
                         },
                     ]
                   : []),
+              partnersCard,
           ];
 
-    const actions: [string, Icon][] = [
-        ['Пополнить', TrayArrowDownIcon],
-        ['Перевести', ArrowsClockwiseIcon],
-        ['Оплатить', WalletIcon],
-    ];
+    const actions: [string, Icon, () => void][] = isParent
+        ? [
+              ['Пополнить', TrayArrowDownIcon, notInDemo],
+              ['Перевести', ArrowsClockwiseIcon, notInDemo],
+              ['Оплатить', WalletIcon, notInDemo],
+          ]
+        : [
+              ['Попросить', HandCoinsIcon, () => set({ bankSheet: 'ask' })],
+              [
+                  'Перевести',
+                  ArrowsClockwiseIcon,
+                  () =>
+                      flash(
+                          c.features.transfers
+                              ? 'В демо переводы не работают'
+                              : 'Переводы выключены мамой — попроси включить на экране карты',
+                          'bankToast',
+                      ),
+              ],
+              ['Оплатить', WalletIcon, () => set({ bankSheet: 'pay' })],
+          ];
 
     return (
         <div className="bank-scroll scroll" style={{ gap: 14, paddingBottom: 24 }}>
@@ -196,8 +232,8 @@ export function BankHome({ game }: { game: GameState }) {
                     </button>
                 </div>
                 <div className="grid-3">
-                    {actions.map(([label, Ico]) => (
-                        <button key={label} className="quick-action" onClick={notInDemo}>
+                    {actions.map(([label, Ico, onTap]) => (
+                        <button key={label} className="quick-action" onClick={onTap}>
                             <span>
                                 <Ico size={32} />
                             </span>
@@ -210,21 +246,28 @@ export function BankHome({ game }: { game: GameState }) {
                 <div className="history-tile">
                     <ClockCounterClockwiseIcon size={26} />
                 </div>
-                <div className="op-card">
+                <button
+                    className="op-card"
+                    onClick={() => (isParent ? set({ bankTab: 'city', parentTab: 'ops' }) : set({ page: 'card' }))}
+                >
                     <div className="op-icon">
                         <ArrowUpRightIcon size={24} />
                     </div>
                     <div className="stack grow" style={{ minWidth: 0, lineHeight: 1.25 }}>
-                        <b className="ellipsis">{isParent ? `Перевод ${famChild.dat}` : 'Перевод от мамы'}</b>
-                        <span className="small" style={{ fontSize: 13 }}>
-                            За задание «{game.lastTitle}»
+                        <b className="ellipsis">
+                            {isParent ? `Карта ${famChild.gen}` : (lastOp?.title ?? 'Операций нет')}
+                        </b>
+                        <span className="small ellipsis" style={{ fontSize: 13 }}>
+                            {isParent ? (lastOp?.title ?? 'Операций нет') : lastOp ? when(lastOp.at) : ''}
                         </span>
                     </div>
-                    <b className="num">
-                        {isParent ? '−' : '+'}
-                        {byn(game.lastPaid)}
-                    </b>
-                </div>
+                    {lastOp && (
+                        <b className={`num ${lastOp.status === 'declined' ? 'neg' : ''}`}>
+                            {lastOp.income ? '+' : '−'}
+                            {byn(lastOp.amt)}
+                        </b>
+                    )}
+                </button>
             </div>
             <div className="pad">
                 <button className="city-banner" onClick={toCity}>
@@ -261,16 +304,24 @@ export function BankHome({ game }: { game: GameState }) {
     );
 }
 
-export function BankProducts() {
+export function BankProducts({ game }: { game: GameState }) {
     const role = useUi((s) => s.role);
-    const family = useUi((s) => s.family);
+    const family = !!game.pkg;
     const set = useUi((s) => s.set);
-    const famChild = useFamilyChild();
+    const flash = useUi((s) => s.flash);
+    const action = useGameAction();
+    const famChild = familyChild(game);
+    const allowed = game.controls.products;
+    /** Продукт, который родитель не разрешил: просим доступ */
+    const ask = (key: 'kopilka' | 'deposits') => () => {
+        action.mutate({ type: 'req/create', kind: 'product', key, note: '' });
+        flash('Нужно разрешение мамы — просьба отправлена', 'bankToast');
+    };
     const notInDemo = useNotInDemo();
     const toCity = useToCity();
     const teen = role === 'teen';
 
-    const products: { title: string; sub: string; Icon: Icon; isNew?: boolean; go?: () => void }[] =
+    const products: { title: string; sub: string; Icon: Icon; isNew?: boolean; locked?: boolean; go?: () => void }[] =
         role === 'parent'
             ? [
                   { title: 'Карты и счета', sub: 'Ваши карты и счета', Icon: CardsIcon },
@@ -285,31 +336,47 @@ export function BankProducts() {
                       isNew: !family,
                       go: toCity,
                   },
+                  {
+                      title: 'Партнёры и баллы',
+                      sub: 'Скидки и семейный кешбэк у партнёров',
+                      Icon: StarIcon,
+                      go: () => set({ page: 'partners' }),
+                  },
               ]
             : [
                   {
                       title: 'Моя карта',
                       sub: teen ? 'Moby Teen · кешбэк по уровню в МТ Сити' : 'Moby Kids · дизайн из магазина МТ Сити',
                       Icon: CardsIcon,
-                      go: () => set({ tab: 'profile', bankTab: 'city' }),
+                      go: () => set({ page: 'card' }),
+                  },
+                  {
+                      title: 'Копилка',
+                      sub: allowed.kopilka ? 'План накопления на твою цель' : 'Нужно разрешение мамы',
+                      Icon: PiggyBankIcon,
+                      locked: !allowed.kopilka,
+                      go: allowed.kopilka ? () => set({ page: 'kopilka' }) : ask('kopilka'),
                   },
                   ...(teen
                       ? [
                             {
-                                title: 'Копилка',
-                                sub: 'Бизнес-план твоей цели',
-                                Icon: PiggyBankIcon,
-                                go: () => set({ kopOpen: true }),
-                            },
-                            {
                                 title: 'Вклады',
-                                sub: 'МТБелки и базовые вклады от 3% годовых',
+                                sub: allowed.deposits
+                                    ? 'МТБелки и базовые вклады от 3% годовых'
+                                    : 'Нужно разрешение мамы',
                                 Icon: BankIcon,
-                                isNew: true,
-                                go: () => set({ depositsOpen: true }),
+                                isNew: allowed.deposits,
+                                locked: !allowed.deposits,
+                                go: allowed.deposits ? () => set({ page: 'deposits' }) : ask('deposits'),
                             },
                         ]
                       : []),
+                  {
+                      title: 'Партнёры и баллы',
+                      sub: 'Скидки и баллы у партнёров семьи',
+                      Icon: StarIcon,
+                      go: () => set({ page: 'partners' }),
+                  },
                   { title: 'МТ Сити', sub: 'Город, квесты и задания от мамы', Icon: BuildingsIcon, go: toCity },
               ];
 
@@ -322,6 +389,7 @@ export function BankProducts() {
                         <span className="product-title">
                             {p.title}
                             {p.isNew && <span className="new-tag small">Новое</span>}
+                            {p.locked && <LockSimpleIcon size={18} color="var(--n-500)" />}
                         </span>
                         <span className="small">{p.sub}</span>
                     </div>

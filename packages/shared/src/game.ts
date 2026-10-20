@@ -2,6 +2,7 @@
 // Чистый редьюсер: демо-режим клиента применяет его в браузере, сервер — в БД (TODO(feat/parent)).
 // MTcoin и BYN — в копейках.
 
+import { applyFamily, initialFamily, type CardOp, type FamilyAction, type FamilyState } from './family.js';
 import { pathSteps } from './paths.js';
 
 export type TaskStatus = 'open' | 'review' | 'paid';
@@ -26,7 +27,7 @@ export interface GradeEntry {
     amt: number;
 }
 
-export interface GameState {
+export interface GameState extends FamilyState {
     level: number;
     knowledge: number;
     /** Баланс в игре, копейки MTcoin */
@@ -114,7 +115,8 @@ export type GameAction =
     | { type: 'shop/buy'; cat: ShopCategory; id: string }
     | { type: 'shop/equip'; cat: ShopCategory; id: string }
     | { type: 'deposit/open'; id: string; amt: number }
-    | { type: 'kop/set'; patch: Partial<KopPlan> };
+    | { type: 'kop/set'; patch: Partial<KopPlan> }
+    | FamilyAction;
 
 /** 1 BYN награды = 10 MTcoin в игре */
 export const COINS_PER_BYN = 10;
@@ -223,7 +225,7 @@ export const initialGame = (): GameState => ({
     level: 3,
     knowledge: 180,
     coins: 24_000,
-    byn: 1_250,
+    byn: 2_500,
     parentCard: 14_620,
     tasks: [
         { id: 't1', title: 'Вынести мусор', byn: 200, status: 'paid', returned: false, icon: 'trash' },
@@ -264,6 +266,7 @@ export const initialGame = (): GameState => ({
     },
     lastPaid: 200,
     lastTitle: 'Вынести мусор',
+    ...initialFamily(),
 });
 
 /** Отметки, которые «приходят из электронного дневника» в демо */
@@ -411,8 +414,18 @@ export function applyGameAction(s: GameState, a: GameAction): GameState {
         case 'task/approve': {
             const t = s.tasks.find((x) => x.id === a.id);
             if (t?.status !== 'review') return s;
+            const op: CardOp = {
+                id: `op-${t.id}`,
+                title: `За задание «${t.title}»`,
+                cat: 'income',
+                amt: t.byn,
+                income: true,
+                status: 'done',
+                at: Date.now(),
+            };
             return {
                 ...s,
+                ops: [op, ...s.ops],
                 lastPaid: t.byn,
                 lastTitle: t.title,
                 tasks: updateTask(s, a.id, { status: 'paid' }),
@@ -504,7 +517,7 @@ export function applyGameAction(s: GameState, a: GameAction): GameState {
             return equip(s, a.cat, a.id);
         case 'deposit/open': {
             const d = TEEN_DEPOSITS.find((x) => x.id === a.id);
-            if (!d || a.amt < DEPOSIT_MIN || a.amt > s.byn) return s;
+            if (!d || !s.controls.products.deposits || a.amt < DEPOSIT_MIN || a.amt > s.byn) return s;
             const inc = depositIncome(a.amt, d.rate, d.months);
             return {
                 ...s,
@@ -514,6 +527,8 @@ export function applyGameAction(s: GameState, a: GameAction): GameState {
         }
         case 'kop/set':
             return { ...s, kop: { ...s.kop, ...a.patch } };
+        default:
+            return applyFamily(s, a, CARD_TIERS[tierIndex(s.level)].cb);
     }
 }
 

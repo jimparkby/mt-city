@@ -16,3 +16,16 @@ export function nameCases(name: string): { gen: string; dat: string } {
     if (name.endsWith('я')) return { gen: stem + 'и', dat: stem + (stem.endsWith('и') ? 'и' : 'е') };
     return { gen: name + 'а', dat: name + 'у' };
 }
+
+/** Время операции: «сегодня, 14:20», «вчера, 09:05» или «12 окт.» */
+export function when(at: number) {
+    const d = new Date(at);
+    const now = new Date();
+    const time = d.toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' });
+    const days = Math.round(
+        (new Date(now.toDateString()).getTime() - new Date(d.toDateString()).getTime()) / 86_400_000,
+    );
+    if (days === 0) return `сегодня, ${time}`;
+    if (days === 1) return `вчера, ${time}`;
+    return d.toLocaleDateString('ru-RU', { day: 'numeric', month: 'short' });
+}

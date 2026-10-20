@@ -15,6 +15,7 @@ import { useUi } from '../../store/ui';
 import { useTeen } from '../roles';
 import { shade } from '../art/svg';
 import { buildingById, locationArt } from '../art/city';
+import { LocationExtras } from './LocationExtras';
 import { STEP_ICONS } from './steps';
 
 const KIND_LABEL = { lesson: 'Урок', quiz: 'Квиз', sim: 'Симуляция', work: 'Работа' } as const;
@@ -84,6 +85,7 @@ export function Location({ game }: { game: GameState }) {
             </div>
             <div className="location-body scroll">
                 <Bubble kicker="КАК ЗДЕСЬ ВСЁ УСТРОЕНО">{path.tip}</Bubble>
+                <LocationExtras game={game} loc={loc} />
                 <div className="timeline">
                     {steps.map((p, k) => {
                         const st = stats[k];

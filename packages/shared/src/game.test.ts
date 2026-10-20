@@ -111,6 +111,6 @@ describe('пути в зданиях, магазин и вклады (v7)', () =
         const s = applyGameAction(s0, { type: 'deposit/open', id: 'b6', amt: 1_000 });
         expect(s.byn).toBe(s0.byn - 1_000);
         expect(s.deposits[0]).toMatchObject({ amt: 1_000, inc: 20 });
-        expect(applyGameAction(s, { type: 'deposit/open', id: 'b6', amt: 1_000 })).toBe(s);
+        expect(applyGameAction(s, { type: 'deposit/open', id: 'b6', amt: 2_000 })).toBe(s);
     });
 });

@@ -9,6 +9,12 @@ export type GameTab = 'city' | 'tasks' | 'profile';
 export type ShopTab = 'top' | 'hat' | 'card';
 export type Sheet = { type: 'week' } | { type: 'building'; id: string };
 export type Overlay = 'dream' | 'levelup';
+/** Экран Moby поверх вкладки: продукты ребёнка, карта, партнёры */
+export type Page = 'deposits' | 'kopilka' | 'card' | 'partners';
+/** Шторки Moby у ребёнка: демо-оплата и просьба к родителю */
+export type BankSheet = 'pay' | 'ask';
+/** Вкладки кабинета родителя */
+export type ParentTab = 'tasks' | 'control' | 'ops';
 
 export interface StepOpen {
     loc: string;
@@ -30,13 +36,11 @@ interface UiState {
     step: StepOpen | null;
     /** Запрос «дойти до здания»: город ведёт туда персонажа и открывает локацию */
     walk: { id: string; n: number } | null;
-    depositsOpen: boolean;
-    kopOpen: boolean;
+    page: Page | null;
+    bankSheet: BankSheet | null;
+    parentTab: ParentTab;
     shopTab: ShopTab;
     hideBalance: boolean;
-    /** Родитель: создана ли Moby Семья и возраст ребёнка */
-    family: boolean;
-    familyAge: 'kid' | 'teen';
     /** Обучение с Мони пройдено (по ролям) и текущий шаг */
     onboarded: Partial<Record<Role, boolean>>;
     obStep: number;
@@ -68,8 +72,6 @@ interface Saved {
     role: Role;
     bankTab: BankTab;
     onboarded: Partial<Record<Role, boolean>>;
-    family: boolean;
-    familyAge: 'kid' | 'teen';
 }
 
 function loadSaved(): Partial<Saved> {
@@ -90,8 +92,8 @@ const transient = {
     loc: null,
     step: null,
     walk: null,
-    depositsOpen: false,
-    kopOpen: false,
+    page: null,
+    bankSheet: null,
     obStep: 0,
 };
 
@@ -102,16 +104,16 @@ export const useUi = create<UiState>((set, get) => {
         bankTab: saved.bankTab ?? 'home',
         shopTab: 'top',
         hideBalance: false,
-        family: saved.family ?? true,
-        familyAge: saved.familyAge ?? 'kid',
+        parentTab: 'tasks',
         onboarded: saved.onboarded ?? {},
         toast: null,
         parentToast: null,
         bankToast: null,
         ...transient,
 
-        setRole: (role) => set({ role, sheet: null, overlay: null, loc: null, step: null, obStep: 0 }),
-        goBank: (bankTab) => set({ bankTab, sheet: null }),
+        setRole: (role) =>
+            set({ role, sheet: null, overlay: null, loc: null, step: null, obStep: 0, page: null, bankSheet: null }),
+        goBank: (bankTab) => set({ bankTab, sheet: null, page: null, bankSheet: null }),
         setTab: (tab) => set({ tab, sheet: null, loc: null, step: null }),
         openSheet: (sheet) => set({ sheet }),
         closeSheet: () => set({ sheet: null }),
@@ -133,8 +135,8 @@ export const useUi = create<UiState>((set, get) => {
                 tab: 'city',
                 loc: null,
                 step: null,
-                kopOpen: false,
-                depositsOpen: false,
+                page: null,
+                bankSheet: null,
             });
         },
         flash: (message, key = 'toast') => {
@@ -152,8 +154,6 @@ useUi.subscribe((s) => {
         role: s.role,
         bankTab: s.bankTab,
         onboarded: s.onboarded,
-        family: s.family,
-        familyAge: s.familyAge,
     };
     try {
         localStorage.setItem(STORE_KEY, JSON.stringify(saved));

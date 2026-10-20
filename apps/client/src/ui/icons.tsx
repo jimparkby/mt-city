@@ -1,21 +1,30 @@
 import {
+    ArrowDownLeftIcon,
     BankIcon,
     BriefcaseIcon,
-    BroomIcon,
     CoffeeIcon,
-    DropIcon,
     FirstAidKitIcon,
     HouseLineIcon,
     ScalesIcon,
     ShoppingCartIcon,
     StampIcon,
-    StarIcon,
     StorefrontIcon,
+    BroomIcon,
+    BusIcon,
+    DiceFiveIcon,
+    DropIcon,
+    FilmSlateIcon,
+    ForkKnifeIcon,
+    GameControllerIcon,
+    ProhibitIcon,
+    ShoppingBagIcon,
+    StarIcon,
     TrashIcon,
     type Icon,
 } from '@phosphor-icons/react';
-import type { BuildingId, TaskIcon } from '@mt/shared';
+import type { BuildingId, SpendCat, TaskIcon } from '@mt/shared';
 
+/** Иконки зданий для старой Phaser-карты (src/game) */
 export const BUILDING_ICONS: Record<BuildingId, Icon> = {
     bank: BankIcon,
     sosedi: ShoppingCartIcon,
@@ -33,4 +42,15 @@ export const TASK_ICONS: Record<TaskIcon, Icon> = {
     drop: DropIcon,
     broom: BroomIcon,
     star: StarIcon,
+};
+
+export const CAT_ICONS: Record<SpendCat | 'income', Icon> = {
+    food: ForkKnifeIcon,
+    transport: BusIcon,
+    shops: ShoppingBagIcon,
+    fun: FilmSlateIcon,
+    games: GameControllerIcon,
+    gambling: DiceFiveIcon,
+    adult: ProhibitIcon,
+    income: ArrowDownLeftIcon,
 };

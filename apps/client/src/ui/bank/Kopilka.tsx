@@ -113,7 +113,7 @@ export function Kopilka({ game }: { game: GameState }) {
         <div className="bank-page kopilka scroll">
             <div className="page-bar">
                 <div className="page-bar-inner">
-                    <button className="icon-btn" onClick={() => set({ kopOpen: false })} aria-label="Назад">
+                    <button className="icon-btn" onClick={() => set({ page: null })} aria-label="Назад">
                         <CaretLeftIcon size={22} />
                     </button>
                     <div className="stack grow" style={{ minWidth: 0, lineHeight: 1.15 }}>
