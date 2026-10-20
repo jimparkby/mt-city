@@ -1,26 +1,35 @@
 import { useEffect, useRef, useState } from 'react';
+import { CellSignalFullIcon, NavigationArrowIcon } from '@phosphor-icons/react';
 import { useDevReset, useGame, useMe, useMobyLogin } from './api/hooks';
 import { isDemoMode } from './api/client';
 import { t } from './i18n';
 import { moby } from './moby';
 import { MobyMockModal } from './moby/MobyMockModal';
-import { useUi } from './store/ui';
-import { ChildHome } from './ui/child/ChildHome';
-import { ChildOverlays } from './ui/child/Overlays';
-import { ChildSheets } from './ui/child/Sheets';
+import { useUi, type Role } from './store/ui';
+import { BankChat, BankHome, BankMore, BankNav, BankProducts } from './ui/bank/BankScreens';
+import { Deposits } from './ui/bank/Deposits';
+import { Kopilka } from './ui/bank/Kopilka';
+import { resetCity } from './ui/child/cityState';
+import { Game, GameNav } from './ui/child/Game';
+import { Onboarding } from './ui/Onboarding';
 import { ParentHome } from './ui/parent/ParentHome';
+
+const ROLES: [Role, string, string][] = [
+    ['kid', '7–13 лет', 'Алиса · MTcoin'],
+    ['teen', '14–17 лет', 'Марк · кешбэк'],
+    ['parent', 'Родитель', 'Ольга · задания'],
+];
 
 function App() {
     const login = useMobyLogin();
     const loginStarted = useRef(false);
     const { data: me } = useMe();
     const { data: game } = useGame();
-    const role = useUi((s) => s.role);
-    const setRole = useUi((s) => s.setRole);
-    const toast = useUi((s) => s.toast);
-    const parentToast = useUi((s) => s.parentToast);
-    const wide = useMedia('(min-width: 900px)');
+    const ui = useUi();
     const reset = useDevReset();
+    const phone = useRef<HTMLDivElement>(null);
+    // На компьютере телефон рисуется в рамке со статус-баром, на телефоне — на весь экран
+    const framed = useMedia('(min-width: 600px)') && isDemoMode;
 
     // При каждом запуске входим по свежему токену Moby (он одноразовый)
     useEffect(() => {
@@ -29,12 +38,17 @@ function App() {
         login.mutate();
     }, [login]);
 
-    // Android «назад»: закрыть шторку/оверлей, иначе — вернуться в Moby
+    // Android «назад»: закрыть верхний слой, иначе — вернуться в Moby
     useEffect(() => {
         const onPop = () => {
-            const ui = useUi.getState();
-            if (ui.overlay) ui.closeOverlay();
-            else if (ui.sheet) ui.closeSheet();
+            const s = useUi.getState();
+            if (s.step) s.openStep(null);
+            else if (s.overlay) s.closeOverlay();
+            else if (s.sheet) s.closeSheet();
+            else if (s.loc) s.closeLoc();
+            else if (s.kopOpen || s.depositsOpen) s.set({ kopOpen: false, depositsOpen: false });
+            else if (s.bankTab === 'city' && s.tab !== 'city') s.setTab('city');
+            else if (isDemoMode && s.bankTab !== 'home') s.goBank('home');
             else return moby.close();
             history.pushState(null, '');
         };
@@ -43,26 +57,50 @@ function App() {
         return () => window.removeEventListener('popstate', onPop);
     }, []);
 
-    // На компьютере (демо) показываем ребёнка и родителя рядом, на телефоне — переключатель
-    const both = isDemoMode && wide;
-    const showChild = both || role === 'child';
-    const showParent = both || role === 'parent';
+    // Внутри Moby банковские экраны рисует само приложение: показываем только МТ Сити
+    const bankTab = isDemoMode ? ui.bankTab : 'city';
+    const isParent = ui.role === 'parent';
+    const teen = ui.role === 'teen';
+    const inGame = bankTab === 'city' && !isParent;
+    const showOnboarding = bankTab === 'city' && !ui.onboarded[ui.role] && !ui.overlay && !!game;
+    const statusBg =
+        bankTab === 'home' ? '#2f62e6' : bankTab === 'city' ? (isParent ? '#2f6bf0' : '#0f1a46') : '#1a1b22';
 
     return (
-        <div className="stage">
+        <div className={`stage ${framed ? 'framed' : ''}`}>
             {isDemoMode && (
                 <div className="demo-bar">
-                    {!both && (
-                        <div className="segmented">
-                            <button aria-pressed={role === 'child'} onClick={() => setRole('child')}>
-                                Ребёнок
+                    <div className="segmented">
+                        {ROLES.map(([id, label, sub]) => (
+                            <button key={id} aria-pressed={ui.role === id} onClick={() => ui.setRole(id)}>
+                                <b>{label}</b>
+                                <span>{sub}</span>
                             </button>
-                            <button aria-pressed={role === 'parent'} onClick={() => setRole('parent')}>
-                                Родитель
-                            </button>
-                        </div>
+                        ))}
+                    </div>
+                    {isParent && (
+                        <button
+                            className="family-toggle"
+                            role="switch"
+                            aria-checked={ui.family}
+                            onClick={() => ui.set({ family: !ui.family })}
+                        >
+                            <span className="toggle" />
+                            Семья создана
+                        </button>
                     )}
-                    <button className="link-button" onClick={() => reset.mutate()}>
+                    <button className="moni-btn" onClick={ui.restartOnboarding}>
+                        <img src="/assets/moni-face.jpg" alt="" />
+                        Обучение с Мони
+                    </button>
+                    <button
+                        className="link-button"
+                        onClick={() => {
+                            reset.mutate();
+                            resetCity();
+                            ui.resetUi();
+                        }}
+                    >
                         Сбросить демо
                     </button>
                 </div>
@@ -75,32 +113,37 @@ function App() {
                     </button>
                 </div>
             )}
-            <div className={`phones ${both ? 'both' : ''}`}>
-                {showChild && (
-                    <div className="phone-col">
-                        <span className="phone-label">Ребёнок · Город</span>
-                        <div className="phone child">
-                            {me && game && (
-                                <>
-                                    <ChildHome me={me} game={game} />
-                                    <ChildSheets me={me} game={game} />
-                                    <ChildOverlays game={game} />
-                                </>
-                            )}
-                            {toast && <div className="toast">{toast}</div>}
-                            <MobyMockModal />
-                        </div>
+            <div className={`phone ${framed ? 'framed' : ''}`} ref={phone}>
+                {framed && (
+                    <div className="statusbar" style={{ background: statusBg }}>
+                        <span className="row" style={{ gap: 4 }}>
+                            11:49
+                            <NavigationArrowIcon size={13} weight="fill" style={{ transform: 'scaleX(-1)' }} />
+                        </span>
+                        <span className="row" style={{ gap: 6 }}>
+                            <CellSignalFullIcon size={16} weight="fill" />
+                            <span style={{ fontSize: 13 }}>3G</span>
+                            <span className="battery">74</span>
+                        </span>
                     </div>
                 )}
-                {showParent && (
-                    <div className="phone-col">
-                        <span className="phone-label">Родитель · Moby</span>
-                        <div className="phone">
-                            {me && game && <ParentHome me={me} game={game} />}
-                            {parentToast && <div className="toast top">{parentToast}</div>}
+                {me && game && (
+                    <>
+                        <div className="screen">
+                            {bankTab === 'home' && <BankHome game={game} />}
+                            {bankTab === 'products' && <BankProducts />}
+                            {bankTab === 'chat' && <BankChat />}
+                            {bankTab === 'more' && <BankMore />}
+                            {bankTab === 'city' && (isParent ? <ParentHome game={game} /> : <Game game={game} />)}
+                            {teen && ui.depositsOpen && <Deposits game={game} />}
+                            {teen && ui.kopOpen && <Kopilka game={game} />}
+                            {ui.bankToast && <div className="toast top">{ui.bankToast}</div>}
                         </div>
-                    </div>
+                        {inGame ? <GameNav game={game} /> : <BankNav game={game} />}
+                        {showOnboarding && <Onboarding phone={phone} />}
+                    </>
                 )}
+                <MobyMockModal />
             </div>
         </div>
     );

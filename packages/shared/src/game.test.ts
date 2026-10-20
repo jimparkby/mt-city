@@ -85,3 +85,32 @@ describe('бонусы в городе', () => {
         expect(applyGameAction(s0, { type: 'city/collect', id: 'legal' })).toBe(s0);
     });
 });
+
+describe('пути в зданиях, магазин и вклады (v7)', () => {
+    it('шаг пути: ребёнку MTcoin, подростку знания, второй раз не платится', () => {
+        const s0 = initialGame();
+        const kid = applyGameAction(s0, { type: 'step/complete', loc: 'bank', k: 1 });
+        expect(kid.coins).toBe(s0.coins + 1_500);
+        expect(kid.quizDone).toBe(true);
+        expect(applyGameAction(kid, { type: 'step/complete', loc: 'bank', k: 1 })).toBe(kid);
+        const teen = applyGameAction(s0, { type: 'step/complete', loc: 'sosedi', k: 0, teen: true });
+        expect(teen.coins).toBe(s0.coins);
+        expect(teen.knowledge).toBe(s0.knowledge + 20);
+    });
+
+    it('покупка в магазине списывает MTcoin и надевает вещь', () => {
+        const s0 = initialGame();
+        const s = applyGameAction(s0, { type: 'shop/buy', cat: 'top', id: 'tee' });
+        expect(s.coins).toBe(s0.coins - 8_000);
+        expect(s.outfit.top).toBe('tee');
+        expect(applyGameAction(s, { type: 'shop/buy', cat: 'hat', id: 'crown' })).toBe(s); // 400 > 160
+    });
+
+    it('вклад открывается с детской карты и не больше остатка', () => {
+        const s0 = initialGame();
+        const s = applyGameAction(s0, { type: 'deposit/open', id: 'b6', amt: 1_000 });
+        expect(s.byn).toBe(s0.byn - 1_000);
+        expect(s.deposits[0]).toMatchObject({ amt: 1_000, inc: 20 });
+        expect(applyGameAction(s, { type: 'deposit/open', id: 'b6', amt: 1_000 })).toBe(s);
+    });
+});

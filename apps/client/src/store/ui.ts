@@ -1,56 +1,163 @@
 import { create } from 'zustand';
-import type { BuildingId } from '@mt/shared';
 
-export type Role = 'child' | 'parent';
-export type Sheet =
-    | { type: 'node'; id: number }
-    | { type: 'week' }
-    | { type: 'profile' }
-    | { type: 'path' }
-    | { type: 'tasks' }
-    /** Карточка здания с описанием */
-    | { type: 'building'; id: BuildingId }
-    /** Экран внутри здания (банк, магазин…) */
-    | { type: 'screen'; id: BuildingId };
-export type Overlay = 'dream' | 'quiz' | 'levelup';
+/** Демо-роли из макета v7: ребёнок 7–13 (MTcoin), подросток 14–17 (кешбэк), родитель (Moby Семья) */
+export type Role = 'kid' | 'teen' | 'parent';
+/** Вкладки нижнего меню Moby */
+export type BankTab = 'home' | 'products' | 'city' | 'chat' | 'more';
+/** Вкладки игры */
+export type GameTab = 'city' | 'tasks' | 'profile';
+export type ShopTab = 'top' | 'hat' | 'card';
+export type Sheet = { type: 'week' } | { type: 'building'; id: string };
+export type Overlay = 'dream' | 'levelup';
+
+export interface StepOpen {
+    loc: string;
+    k: number;
+    /** Выбранный ответ квиза */
+    picked: number | null;
+}
+
+type ToastKey = 'toast' | 'parentToast' | 'bankToast';
 
 interface UiState {
-    /** Демо-переключатель на узком экране. В жизни родитель видит свой кабинет в Moby, а не в игре. */
     role: Role;
+    bankTab: BankTab;
+    tab: GameTab;
     sheet: Sheet | null;
     overlay: Overlay | null;
-    /** Тосты у ребёнка и у родителя раздельные: на компьютере оба телефона видны сразу */
+    /** Открытый экран здания и шаг пути в нём */
+    loc: string | null;
+    step: StepOpen | null;
+    /** Запрос «дойти до здания»: город ведёт туда персонажа и открывает локацию */
+    walk: { id: string; n: number } | null;
+    depositsOpen: boolean;
+    kopOpen: boolean;
+    shopTab: ShopTab;
+    hideBalance: boolean;
+    /** Родитель: создана ли Moby Семья и возраст ребёнка */
+    family: boolean;
+    familyAge: 'kid' | 'teen';
+    /** Обучение с Мони пройдено (по ролям) и текущий шаг */
+    onboarded: Partial<Record<Role, boolean>>;
+    obStep: number;
     toast: string | null;
     parentToast: string | null;
+    bankToast: string | null;
+
     setRole: (role: Role) => void;
+    goBank: (tab: BankTab) => void;
+    setTab: (tab: GameTab) => void;
     openSheet: (sheet: Sheet) => void;
     closeSheet: () => void;
     openOverlay: (overlay: Overlay) => void;
     closeOverlay: () => void;
-    flash: (message: string) => void;
-    flashParent: (message: string) => void;
+    openLoc: (id: string) => void;
+    closeLoc: () => void;
+    openStep: (step: StepOpen | null) => void;
+    walkTo: (id: string) => void;
+    set: (patch: Partial<UiState>) => void;
+    finishOnboarding: () => void;
+    restartOnboarding: () => void;
+    flash: (message: string, key?: ToastKey) => void;
+    resetUi: () => void;
 }
 
-const timers: Record<string, ReturnType<typeof setTimeout>> = {};
+const STORE_KEY = 'mt-city:ui:v7';
 
-export const useUi = create<UiState>((set) => {
-    const show = (key: 'toast' | 'parentToast', message: string) => {
-        clearTimeout(timers[key]);
-        set({ [key]: message });
-        timers[key] = setTimeout(() => set({ [key]: null }), 2400);
-    };
+interface Saved {
+    role: Role;
+    bankTab: BankTab;
+    onboarded: Partial<Record<Role, boolean>>;
+    family: boolean;
+    familyAge: 'kid' | 'teen';
+}
+
+function loadSaved(): Partial<Saved> {
+    try {
+        return JSON.parse(localStorage.getItem(STORE_KEY) || '{}') as Partial<Saved>;
+    } catch {
+        return {};
+    }
+}
+
+const timers: Partial<Record<ToastKey, ReturnType<typeof setTimeout>>> = {};
+let walkN = 0;
+
+const transient = {
+    tab: 'city' as GameTab,
+    sheet: null,
+    overlay: null,
+    loc: null,
+    step: null,
+    walk: null,
+    depositsOpen: false,
+    kopOpen: false,
+    obStep: 0,
+};
+
+export const useUi = create<UiState>((set, get) => {
+    const saved = loadSaved();
     return {
-        role: 'child',
-        sheet: null,
-        overlay: null,
+        role: saved.role ?? 'kid',
+        bankTab: saved.bankTab ?? 'home',
+        shopTab: 'top',
+        hideBalance: false,
+        family: saved.family ?? true,
+        familyAge: saved.familyAge ?? 'kid',
+        onboarded: saved.onboarded ?? {},
         toast: null,
         parentToast: null,
-        setRole: (role) => set({ role, sheet: null, overlay: null }),
+        bankToast: null,
+        ...transient,
+
+        setRole: (role) => set({ role, sheet: null, overlay: null, loc: null, step: null, obStep: 0 }),
+        goBank: (bankTab) => set({ bankTab, sheet: null }),
+        setTab: (tab) => set({ tab, sheet: null, loc: null, step: null }),
         openSheet: (sheet) => set({ sheet }),
         closeSheet: () => set({ sheet: null }),
         openOverlay: (overlay) => set({ overlay, sheet: null }),
         closeOverlay: () => set({ overlay: null }),
-        flash: (message) => show('toast', message),
-        flashParent: (message) => show('parentToast', message),
+        openLoc: (loc) => set({ loc, step: null, sheet: null }),
+        closeLoc: () => set({ loc: null, step: null }),
+        openStep: (step) => set({ step }),
+        walkTo: (id) => set({ walk: { id, n: ++walkN }, sheet: null }),
+        set: (patch) => set(patch),
+        finishOnboarding: () => set({ onboarded: { ...get().onboarded, [get().role]: true }, obStep: 0 }),
+        restartOnboarding: () => {
+            const onboarded = { ...get().onboarded };
+            delete onboarded[get().role];
+            set({
+                onboarded,
+                obStep: 0,
+                bankTab: 'city',
+                tab: 'city',
+                loc: null,
+                step: null,
+                kopOpen: false,
+                depositsOpen: false,
+            });
+        },
+        flash: (message, key = 'toast') => {
+            clearTimeout(timers[key]);
+            set({ [key]: message });
+            timers[key] = setTimeout(() => set({ [key]: null }), 2600);
+        },
+        resetUi: () => set({ ...transient }),
     };
+});
+
+// Роль, вкладка Moby, семья и пройденное обучение переживают перезагрузку
+useUi.subscribe((s) => {
+    const saved: Saved = {
+        role: s.role,
+        bankTab: s.bankTab,
+        onboarded: s.onboarded,
+        family: s.family,
+        familyAge: s.familyAge,
+    };
+    try {
+        localStorage.setItem(STORE_KEY, JSON.stringify(saved));
+    } catch {
+        // localStorage недоступен
+    }
 });

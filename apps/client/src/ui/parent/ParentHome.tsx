@@ -1,272 +1,271 @@
 import { useState } from 'react';
-import { GRADES, TASK_PRESETS, weekQuests, type GameState, type PlayerDto, type TaskIcon } from '@mt/shared';
-import { PencilSimpleLineIcon } from '@phosphor-icons/react';
+import { TASK_PRESETS, weekQuests, type GameState, type TaskIcon } from '@mt/shared';
+import { CoinsIcon, PencilSimpleLineIcon, PercentIcon, PlusIcon, type Icon } from '@phosphor-icons/react';
 import { useGameAction } from '../../api/hooks';
 import { useUi } from '../../store/ui';
-import { byn, nameCases } from '../format';
+import { byn } from '../format';
 import { TASK_ICONS } from '../icons';
+import { PARENT_NAME, useFamilyChild } from '../roles';
 
-const QUICK = [100, 200, 500, 1_000];
-const CUSTOM = { label: 'Своё задание', hint: 'напишите сами', byn: 200 };
-const STATUS = {
-    open: { text: 'Ждём', color: 'var(--n-700)' },
-    review: { text: 'На проверке', color: 'var(--accent-700)' },
-    paid: { text: 'Оплачено', color: 'var(--n-600)' },
-};
-
-function ago(ms?: number) {
-    if (!ms) return '';
-    const min = Math.round((Date.now() - ms) / 60_000);
-    if (min < 1) return 'только что';
-    if (min < 60) return `${min} мин назад`;
-    return `${Math.round(min / 60)} ч назад`;
+/** Кабинет родителя в Moby: семья, проверка заданий и новые задания */
+export function ParentHome({ game }: { game: GameState }) {
+    const family = useUi((s) => s.family);
+    const toast = useUi((s) => s.parentToast);
+    return (
+        <div className="parent">
+            <div className="parent-top">
+                <span className="display">Moby Семья</span>
+                <span>Кабинет родителя</span>
+            </div>
+            {family ? <FamilyCabinet game={game} /> : <CreateFamily />}
+            {toast && <div className="toast top">{toast}</div>}
+        </div>
+    );
 }
 
-/** Кабинет родителя (в пилоте — экран внутри Moby): проверка, задания, награды за оценки */
-export function ParentHome({ me, game }: { me: PlayerDto; game: GameState }) {
+const AGES: ['kid' | 'teen', string, Icon, string][] = [
+    ['kid', '7–13 лет', CoinsIcon, 'Получает MTcoin и тратит их в игре на одежду персонажа и дизайн карты.'],
+    ['teen', '14–17 лет', PercentIcon, 'Без игровой валюты: за уровни растёт кешбэк по карте, от 0 до 3%.'],
+];
+
+const STEPS = [
+    { t: 'Создайте семью', d: 'Вы станете её владельцем' },
+    { t: 'Добавьте ребёнка', d: 'Выпустим ему карту Moby' },
+    { t: 'Ставьте задания', d: 'Платите только за выполненные' },
+];
+
+function CreateFamily() {
+    const age = useUi((s) => s.familyAge);
+    const set = useUi((s) => s.set);
+    const flash = useUi((s) => s.flash);
+    const child = useFamilyChild();
+
+    return (
+        <div className="parent-scroll scroll" style={{ gap: 22 }}>
+            <div className="parent-hero">
+                <div className="row">
+                    <div className="face-disc">{PARENT_NAME[0]}</div>
+                    <div className="face-disc add">
+                        <PlusIcon size={22} weight="bold" />
+                    </div>
+                </div>
+                <span className="display" style={{ fontSize: 24, lineHeight: 1.15 }}>
+                    Создайте Moby Семью
+                </span>
+                <span className="hero-text">
+                    Без семьи детскую карту не выпустить. В семье вы ставите ребёнку задания и платите за выполненные, а
+                    он учится обращаться с деньгами в МТ Сити.
+                </span>
+            </div>
+            <div className="stack" style={{ gap: 10 }}>
+                <span className="h2">Сколько лет ребёнку?</span>
+                <div className="grid-2">
+                    {AGES.map(([id, label, Ico, desc]) => (
+                        <button
+                            key={id}
+                            className={`choice ${age === id ? 'on' : ''}`}
+                            onClick={() => set({ familyAge: id })}
+                        >
+                            <Ico size={28} weight="duotone" />
+                            <b>{label}</b>
+                            <span>{desc}</span>
+                        </button>
+                    ))}
+                </div>
+            </div>
+            <div>
+                {STEPS.map((f, n) => (
+                    <div key={f.t} className="num-step">
+                        <span className="num-disc">{n + 1}</span>
+                        <div className="stack" style={{ gap: 2 }}>
+                            <b>{f.t}</b>
+                            <span className="small">{f.d}</span>
+                        </div>
+                    </div>
+                ))}
+            </div>
+            <button
+                className="btn block tall"
+                onClick={() => {
+                    set({ family: true });
+                    flash(`Семья создана. Карта для ${child.gen} выпущена`, 'parentToast');
+                }}
+            >
+                Создать семью и выпустить карту
+            </button>
+        </div>
+    );
+}
+
+const AMOUNTS = [100, 200, 500, 1_000];
+
+function FamilyCabinet({ game }: { game: GameState }) {
     const action = useGameAction();
-    const flash = useUi((s) => s.flashParent);
+    const flash = useUi((s) => s.flash);
+    const child = useFamilyChild();
+    const teen = useUi((s) => s.familyAge) === 'teen';
     const [preset, setPreset] = useState(0);
     const [custom, setCustom] = useState('');
     const [amount, setAmount] = useState(TASK_PRESETS[0].byn);
 
     const review = game.tasks.filter((t) => t.status === 'review');
-    const others = game.tasks.filter((t) => t.status !== 'review');
+    const active = game.tasks.filter((t) => t.status !== 'review');
+    const weekDone = weekQuests(game).filter((q) => q.done).length;
     const isCustom = preset === TASK_PRESETS.length;
     const canSend = !isCustom || custom.trim().length > 1;
-    const questsDone = weekQuests(game).filter((q) => q.done).length;
-    const { gen, dat } = nameCases(me.name);
+
+    const presets: { label: string; hint: string; Icon: Icon; icon: TaskIcon }[] = [
+        ...TASK_PRESETS.map((p) => ({ label: p.label, hint: p.hint, Icon: TASK_ICONS[p.icon], icon: p.icon })),
+        { label: 'Своё задание', hint: 'напишите сами', Icon: PencilSimpleLineIcon, icon: 'star' },
+    ];
 
     const send = () => {
         if (!canSend) return;
-        const p = TASK_PRESETS[preset];
-        const title = isCustom ? custom.trim() : p.title;
-        const icon: TaskIcon = isCustom ? 'star' : p.icon;
-        action.mutate({ type: 'task/create', title, byn: amount, icon });
+        const title = isCustom ? custom.trim() : TASK_PRESETS[preset].title;
+        action.mutate({ type: 'task/create', title, byn: amount, icon: presets[preset].icon });
         setCustom('');
-        flash(`«${title}» отправлено ${dat}`);
+        flash(`«${title}» отправлено ${child.dat}`, 'parentToast');
     };
 
     return (
-        <>
-            <div className="parent-top" />
-            <div className="scroll">
-                <div className="parent">
-                    <div className="parent-hero">
-                        <div className="row" style={{ justifyContent: 'flex-start', gap: 12 }}>
-                            <div className="hero-avatar" style={{ width: 44, height: 44, fontSize: 18 }}>
-                                {me.name[0]}
-                            </div>
-                            <div style={{ flex: 1, display: 'flex', flexDirection: 'column', lineHeight: 1.15 }}>
-                                <span style={{ fontSize: 22, fontWeight: 800 }}>
-                                    {me.name}, {me.age} лет
-                                </span>
-                                <span style={{ fontSize: 13, color: 'rgba(255,255,255,.75)' }}>
-                                    МТ Сити · уровень {game.level} · квесты {questsDone} из 5
-                                </span>
-                            </div>
-                        </div>
-                        <div className="row num" style={{ gap: 8 }}>
-                            <div className="money-tile">
-                                <span>Ваша карта •• 4821</span>
-                                <b>{byn(game.parentCard)} BYN</b>
-                            </div>
-                            <div className="money-tile">
-                                <span>Детская карта {gen}</span>
-                                <b>{byn(game.byn)} BYN</b>
-                            </div>
-                        </div>
+        <div className="parent-scroll scroll" style={{ gap: 26 }}>
+            <div className="parent-hero">
+                <div className="row" style={{ gap: 12 }}>
+                    <div className="hero-avatar">{child.name[0]}</div>
+                    <div className="stack grow" style={{ lineHeight: 1.2 }}>
+                        <b style={{ fontSize: 20 }}>
+                            {child.name}, {child.age} лет
+                        </b>
+                        <span className="hero-text" style={{ fontSize: 13 }}>
+                            МТ Сити · уровень {game.level} · квесты {weekDone} из 5
+                        </span>
                     </div>
-
-                    <section className="stack" style={{ gap: 10 }}>
-                        <h2 className="h2">Ждёт проверки</h2>
-                        {review.length === 0 && <span className="small">Нечего проверять.</span>}
-                        {review.map((t) => {
-                            const Icon = TASK_ICONS[t.icon];
-                            return (
-                                <div key={t.id} className="review-card">
-                                    <div className="row" style={{ gap: 12 }}>
-                                        <Icon size={28} weight="duotone" color="var(--accent-700)" />
-                                        <div
-                                            style={{
-                                                flex: 1,
-                                                display: 'flex',
-                                                flexDirection: 'column',
-                                                lineHeight: 1.25,
-                                            }}
-                                        >
-                                            <b style={{ fontSize: 17, fontWeight: 600 }}>{t.title}</b>
-                                            <span style={{ fontSize: 13, color: 'var(--accent-800)' }}>
-                                                {me.name} нажала «Готово» {ago(t.submittedAt)}
-                                            </span>
-                                        </div>
-                                        <b className="num" style={{ fontSize: 17 }}>
-                                            {byn(t.byn)}
-                                        </b>
-                                    </div>
-                                    <div className="row">
-                                        <button
-                                            className="btn ghost small"
-                                            style={{ flex: 1, borderColor: 'var(--accent-300)' }}
-                                            onClick={() => {
-                                                action.mutate({ type: 'task/return', id: t.id });
-                                                flash(`Задание вернулось ${dat}`);
-                                            }}
-                                        >
-                                            Вернуть
-                                        </button>
-                                        <button
-                                            className="btn small"
-                                            style={{ flex: 2 }}
-                                            onClick={() => {
-                                                action.mutate({ type: 'task/approve', id: t.id });
-                                                flash(`Переведено ${byn(t.byn)} BYN ${dat}`);
-                                            }}
-                                        >
-                                            Принять · {byn(t.byn)} BYN
-                                        </button>
-                                    </div>
-                                </div>
-                            );
-                        })}
-                    </section>
-
-                    <section className="stack" style={{ gap: 2 }}>
-                        <h2 className="h2" style={{ marginBottom: 6 }}>
-                            Задания {gen}
-                        </h2>
-                        {[...others].reverse().map((t) => {
-                            const Icon = TASK_ICONS[t.icon];
-                            const st = STATUS[t.status];
-                            return (
-                                <div key={t.id} className="row" style={{ gap: 12, padding: '9px 0' }}>
-                                    <Icon size={22} weight="duotone" color="var(--n-700)" />
-                                    <span style={{ flex: 1, fontSize: 15 }}>{t.title}</span>
-                                    <span className="num small" style={{ fontSize: 14 }}>
-                                        {byn(t.byn)}
-                                    </span>
-                                    <span style={{ minWidth: 78, textAlign: 'right', fontSize: 13, color: st.color }}>
-                                        {t.returned && t.status === 'open' ? 'Доделывает' : st.text}
-                                    </span>
-                                </div>
-                            );
-                        })}
-                    </section>
-
-                    <section className="stack">
-                        <h2 className="h2">Новое задание</h2>
-                        <div className="preset-grid">
-                            {[...TASK_PRESETS, CUSTOM].map((p, i) => {
-                                const Icon =
-                                    i < TASK_PRESETS.length ? TASK_ICONS[TASK_PRESETS[i].icon] : PencilSimpleLineIcon;
-                                return (
-                                    <button
-                                        key={p.label}
-                                        className="preset"
-                                        aria-pressed={preset === i}
-                                        onClick={() => {
-                                            setPreset(i);
-                                            setAmount(p.byn);
-                                        }}
-                                    >
-                                        <Icon size={26} weight="duotone" />
-                                        <b>{p.label}</b>
-                                        <small>{p.hint}</small>
-                                    </button>
-                                );
-                            })}
-                        </div>
-                        {isCustom && (
-                            <input
-                                className="text-input"
-                                value={custom}
-                                onChange={(e) => setCustom(e.target.value)}
-                                placeholder="Например: погулять с собакой"
-                                maxLength={80}
-                            />
-                        )}
-                        <div className="stack" style={{ gap: 8 }}>
-                            <span style={{ fontSize: 15 }}>Награда</span>
-                            <div className="row" style={{ gap: 6 }}>
-                                {QUICK.map((v) => (
-                                    <button
-                                        key={v}
-                                        className="chip num"
-                                        style={{ flex: 1 }}
-                                        aria-pressed={amount === v}
-                                        onClick={() => setAmount(v)}
-                                    >
-                                        {v / 100}
-                                    </button>
-                                ))}
-                            </div>
-                            <div className="row">
-                                <span className="small">
-                                    В игре {me.name} получит ещё {amount / 10} MTcoin
-                                </span>
-                                <div className="row" style={{ gap: 6 }}>
-                                    <button className="stepper" onClick={() => setAmount((a) => Math.max(50, a - 50))}>
-                                        −
-                                    </button>
-                                    <b className="num" style={{ minWidth: 48, textAlign: 'center' }}>
-                                        {byn(amount)}
-                                    </b>
-                                    <button
-                                        className="stepper"
-                                        onClick={() => setAmount((a) => Math.min(5_000, a + 50))}
-                                    >
-                                        +
-                                    </button>
-                                </div>
-                            </div>
-                        </div>
-                        <button className="btn" disabled={!canSend} onClick={send}>
-                            Отправить {dat} · {byn(amount)} BYN
-                        </button>
-                        <span className="small">Деньги спишутся, только когда вы примете задание.</span>
-                    </section>
-
-                    <section className="stack" style={{ gap: 10 }}>
-                        <div className="row">
-                            <div className="stack" style={{ gap: 0 }}>
-                                <h2 className="h2">За оценки</h2>
-                                <span className="small">Из электронного дневника</span>
-                            </div>
-                            <button
-                                className="toggle"
-                                role="switch"
-                                aria-checked={game.gradesOn}
-                                aria-label="Награды за оценки"
-                                onClick={() => action.mutate({ type: 'grades/toggle' })}
-                            />
-                        </div>
-                        {game.gradesOn && (
-                            <>
-                                <div className="row" style={{ gap: 8 }}>
-                                    {GRADES.map((g) => (
-                                        <div key={g} className="grade-tile">
-                                            <span style={{ fontSize: 22, fontWeight: 700 }}>{g}</span>
-                                            <span className="small num">
-                                                {game.rules[g] ? `${byn(game.rules[g])} BYN` : 'нет'}
-                                            </span>
-                                        </div>
-                                    ))}
-                                </div>
-                                <button
-                                    className="link-button"
-                                    style={{ alignSelf: 'flex-start' }}
-                                    onClick={() => {
-                                        action.mutate({ type: 'grades/pull' });
-                                        flash('Дневник обновлён');
-                                    }}
-                                >
-                                    Обновить дневник (демо)
-                                </button>
-                            </>
-                        )}
-                    </section>
+                </div>
+                <div className="row num" style={{ gap: 8 }}>
+                    <div className="money-tile">
+                        <span>Ваша карта •• 4821</span>
+                        <b>{byn(game.parentCard)} BYN</b>
+                    </div>
+                    <div className="money-tile">
+                        <span>Детская карта</span>
+                        <b>{byn(game.byn)} BYN</b>
+                    </div>
                 </div>
             </div>
-        </>
+
+            <div className="stack" style={{ gap: 10 }}>
+                <span className="h2">Ждёт проверки</span>
+                {review.length === 0 && (
+                    <span className="small">
+                        Нечего проверять. Когда {child.name} {child.pressed} «Готово», задание появится здесь.
+                    </span>
+                )}
+                {review.map((t) => {
+                    const Ico = TASK_ICONS[t.icon];
+                    return (
+                        <div key={t.id} className="review-card">
+                            <div className="row" style={{ gap: 12 }}>
+                                <Ico size={28} weight="duotone" color="var(--accent-700)" />
+                                <div className="stack grow" style={{ lineHeight: 1.25 }}>
+                                    <b style={{ fontSize: 16 }}>{t.title}</b>
+                                    <span className="small">
+                                        {child.name} {child.pressed} «Готово»
+                                    </span>
+                                </div>
+                                <b className="num">{byn(t.byn)}</b>
+                            </div>
+                            <div className="row" style={{ gap: 8 }}>
+                                <button
+                                    className="btn ghost"
+                                    style={{ flex: 1 }}
+                                    onClick={() => {
+                                        action.mutate({ type: 'task/return', id: t.id });
+                                        flash(`Задание вернулось ${child.dat}`, 'parentToast');
+                                    }}
+                                >
+                                    Вернуть
+                                </button>
+                                <button
+                                    className="btn"
+                                    style={{ flex: 2 }}
+                                    onClick={() => {
+                                        action.mutate({ type: 'task/approve', id: t.id });
+                                        flash(`Переведено ${byn(t.byn)} BYN ${child.dat}`, 'parentToast');
+                                    }}
+                                >
+                                    Принять · {byn(t.byn)} BYN
+                                </button>
+                            </div>
+                        </div>
+                    );
+                })}
+            </div>
+
+            <div className="stack" style={{ gap: 2 }}>
+                <span className="h2" style={{ marginBottom: 8 }}>
+                    Задания: {child.name}
+                </span>
+                {active.map((t) => {
+                    const Ico = TASK_ICONS[t.icon];
+                    return (
+                        <div key={t.id} className="active-row">
+                            <Ico size={22} color="var(--n-700)" />
+                            <span className="grow">{t.title}</span>
+                            <span className="num muted-2">{byn(t.byn)}</span>
+                            <span className={`status ${t.status}`}>{t.status === 'paid' ? 'Оплачено' : 'Ждём'}</span>
+                        </div>
+                    );
+                })}
+            </div>
+
+            <div className="stack" style={{ gap: 12 }}>
+                <span className="h2">Новое задание</span>
+                <div className="grid-2">
+                    {presets.map((p, k) => (
+                        <button
+                            key={p.label}
+                            className={`choice preset ${preset === k ? 'on' : ''}`}
+                            onClick={() => {
+                                setPreset(k);
+                                setAmount(k < TASK_PRESETS.length ? TASK_PRESETS[k].byn : 100);
+                            }}
+                        >
+                            <p.Icon size={26} weight="duotone" />
+                            <b>{p.label}</b>
+                            <span>{p.hint}</span>
+                        </button>
+                    ))}
+                </div>
+                {isCustom && (
+                    <input
+                        className="text-input"
+                        value={custom}
+                        onChange={(e) => setCustom(e.target.value)}
+                        placeholder="Например: погулять с собакой"
+                        maxLength={60}
+                    />
+                )}
+                <div className="row" style={{ gap: 6 }}>
+                    {AMOUNTS.map((v) => (
+                        <button
+                            key={v}
+                            className={`seg-btn tall ${amount === v ? 'on' : ''}`}
+                            onClick={() => setAmount(v)}
+                        >
+                            {v / 100} BYN
+                        </button>
+                    ))}
+                </div>
+                <span className="small">
+                    {teen
+                        ? `${child.name} получит деньги на карту Moby Teen`
+                        : `В игре ${child.name} получит ещё ${amount / 10} MTcoin`}
+                </span>
+                <button className="btn block tall" disabled={!canSend} onClick={send}>
+                    Отправить {child.dat} · {byn(amount)} BYN
+                </button>
+                <span className="small">Деньги спишутся, только когда вы примете задание.</span>
+            </div>
+        </div>
     );
 }
