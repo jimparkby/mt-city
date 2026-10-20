@@ -10,7 +10,6 @@ import type {
     SessionDto,
     ShopDto,
 } from '@mt/shared';
-import { emit } from '../game/EventBus';
 import { moby } from '../moby';
 import { useSession } from '../store/session';
 import { api } from './client';
@@ -98,7 +97,6 @@ function usePlayerMutation<V>(fn: (vars: V) => Promise<PlayerDto>) {
         onSuccess: (player) => {
             qc.setQueryData(keys.me, player);
             qc.invalidateQueries({ queryKey: keys.bank });
-            emit('city:refresh');
         },
     });
 }

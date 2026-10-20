@@ -1,4 +1,5 @@
 import { Scene } from 'phaser';
+import { loadBuildingIcons } from '../cityIcons';
 
 export class Preloader extends Scene {
     constructor() {
@@ -7,13 +8,13 @@ export class Preloader extends Scene {
 
     init() {
         const { width, height } = this.scale;
-        const barWidth = Math.min(300, width - 64);
+        const barWidth = Math.min(240, width - 64);
 
         //  A simple progress bar. This is the outline of the bar.
-        this.add.rectangle(width / 2, height / 2, barWidth, 16).setStrokeStyle(2, 0xffffff);
+        this.add.rectangle(width / 2, height / 2, barWidth, 10).setStrokeStyle(2, 0x201e1d);
 
         //  This is the progress bar itself. It will increase in size from the left based on the % of progress.
-        const bar = this.add.rectangle(width / 2 - barWidth / 2 + 2, height / 2, 4, 12, 0xffffff).setOrigin(0, 0.5);
+        const bar = this.add.rectangle(width / 2 - barWidth / 2 + 2, height / 2, 4, 6, 0xd6006c).setOrigin(0, 0.5);
 
         //  Use the 'progress' event emitted by the LoaderPlugin to update the loading bar
         this.load.on('progress', (progress: number) => {
@@ -22,14 +23,10 @@ export class Preloader extends Scene {
     }
 
     preload() {
-        this.load.setPath('assets');
-
-        // TODO(feat/city): карта из Tiled и тайлы Kenney
-        // this.load.tilemapTiledJSON('city', 'maps/city.tmj');
-        // this.load.image('tiles', 'tiles/city.png');
+        // TODO(feat/city): заменить нарисованные здания артом (Kenney / дизайнер)
     }
 
     create() {
-        this.scene.start('City');
+        loadBuildingIcons(this.textures).then(() => this.scene.start('City'));
     }
 }

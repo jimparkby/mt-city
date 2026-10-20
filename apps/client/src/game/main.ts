@@ -9,7 +9,7 @@ import { Barista } from './scenes/minigames/Barista';
 const config: Phaser.Types.Core.GameConfig = {
     type: AUTO,
     parent: 'game-container',
-    backgroundColor: '#8fd3ff',
+    backgroundColor: '#f5f1e8',
     scale: {
         mode: Scale.RESIZE,
         width: '100%',

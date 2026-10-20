@@ -3,7 +3,12 @@ import type { BuildingId } from '@mt/shared';
 
 export type Role = 'child' | 'parent';
 export type Sheet =
-    { type: 'node'; id: number } | { type: 'week' } | { type: 'profile' } | { type: 'building'; id: BuildingId };
+    | { type: 'node'; id: number }
+    | { type: 'week' }
+    | { type: 'profile' }
+    | { type: 'path' }
+    | { type: 'tasks' }
+    | { type: 'building'; id: BuildingId };
 export type Overlay = 'dream' | 'quiz' | 'levelup';
 
 interface UiState {

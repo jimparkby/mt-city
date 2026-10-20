@@ -9,8 +9,10 @@ export interface GameEvents {
     'current-scene-ready': Phaser.Scene;
     /** Тап по зданию в City → React открывает экран */
     'building:open': { id: BuildingId };
-    /** React изменил состояние города → сцена перерисовывает здания */
-    'city:refresh': void;
+    /** Сцена City создана — React присылает ей актуальное состояние */
+    'city:ready': void;
+    /** React → City: уровень игрока (какие здания открыты) */
+    'city:state': { level: number };
     /** React просит запустить мини-игру */
     'minigame:start': { jobId: string; scene: string };
     /** Мини-игра закончилась → React отправляет POST /jobs/:id/shift */

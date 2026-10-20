@@ -1,36 +1,47 @@
-import { BUILDINGS, PATH, PATH_SECTION, nodeStatus, weekQuests, type GameState, type PlayerDto } from '@mt/shared';
-import { CheckIcon, HeadphonesIcon, LockSimpleIcon, TreasureChestIcon } from '@phosphor-icons/react';
-import { useGameAction } from '../../api/hooks';
+import { useEffect } from 'react';
+import { BUILDINGS, weekQuests, type GameState, type PlayerDto } from '@mt/shared';
+import { CheckSquareIcon, PathIcon } from '@phosphor-icons/react';
+import { emit, on } from '../../game/EventBus';
+import { PhaserGame } from '../../PhaserGame';
 import { useUi } from '../../store/ui';
 import { Riso } from '../components/Riso';
 import { byn, coins } from '../format';
-import { BUILDING_ICONS, TASK_ICONS } from '../icons';
+import { KICKERS, currentNode } from './Parts';
 
-const GUIDE: Record<number, string> = {
-    4: 'Наушники стоят 500 руб. Успеешь накопить за 5 месяцев?',
-    5: 'Узнаем, как деньги в Копилке растут сами.',
-    6: 'Все пять квестов готовы. Открывай сундук!',
-    7: 'Новый раздел откроется на следующей неделе.',
-};
-
-const KICKERS = {
-    lesson: 'Урок',
-    dream: 'Квест · симуляция',
-    quiz: 'Урок · квиз',
-    chest: 'Награда недели',
-    next: 'Следующий уровень',
-} as const;
-
-/** Всё для ребёнка на одном экране: шапка → квесты недели → путь → задания от мамы → город */
+/** Экран ребёнка — город на весь экран, всё остальное поверх карты */
 export function ChildHome({ me, game }: { me: PlayerDto; game: GameState }) {
+    const openSheet = useUi((s) => s.openSheet);
+    const flash = useUi((s) => s.flash);
+
+    // Уровень → какие здания на карте открыты
+    useEffect(() => {
+        const send = () => emit('city:state', { level: game.level });
+        send();
+        return on('city:ready', send);
+    }, [game.level]);
+
+    // Тап по зданию на карте
+    useEffect(
+        () =>
+            on('building:open', ({ id }) => {
+                const b = BUILDINGS.find((x) => x.id === id)!;
+                if (game.level < b.minBankLevel) flash(`${b.name} откроется на уровне ${b.minBankLevel}`);
+                else openSheet({ type: 'building', id });
+            }),
+        [game.level, flash, openSheet],
+    );
+
     return (
         <>
-            <Header me={me} game={game} />
-            <div className="scroll">
-                <WeekCard game={game} />
-                <CurrentStep game={game} />
-                <FamilyTasks game={game} />
-                <City level={game.level} />
+            <div className="map-layer">
+                <PhaserGame />
+            </div>
+            <div className="map-ui">
+                <div className="map-top">
+                    <Header me={me} game={game} />
+                    <WeekCard game={game} />
+                </div>
+                <StepDock game={game} />
             </div>
         </>
     );
@@ -99,161 +110,38 @@ function WeekCard({ game }: { game: GameState }) {
     );
 }
 
-function CurrentStep({ game }: { game: GameState }) {
+/** Нижняя панель: текущий шаг пути + входы в «Путь» и «Задания» */
+function StepDock({ game }: { game: GameState }) {
     const openSheet = useUi((s) => s.openSheet);
-    const statuses = PATH.map((n) => nodeStatus(game, n));
-    const cur = PATH[statuses.indexOf('current')] ?? PATH[PATH.length - 1];
+    const cur = currentNode(game);
+    const openTasks = game.tasks.filter((t) => t.status === 'open').length;
 
     return (
-        <section className="section current-step">
-            <span className="kicker accent-2">
-                Шаг {cur.id} · {KICKERS[cur.kind]}
-            </span>
-            <Riso>{cur.title}</Riso>
-            <p className="body">{cur.desc || GUIDE[cur.id]}</p>
-            <button className="btn" onClick={() => openSheet({ type: 'node', id: cur.id })}>
-                {cur.kind === 'chest' ? 'Открыть сундук' : cur.kind === 'next' ? 'Подробнее' : 'Начать'}
-            </button>
-
-            <span className="kicker" style={{ marginTop: 10 }}>
-                {PATH_SECTION}
-            </span>
-            <div className="path-strip">
-                {PATH.map((n, i) => {
-                    const st = statuses[i];
-                    const icon =
-                        n.kind === 'chest' ? (
-                            <TreasureChestIcon weight="duotone" />
-                        ) : st === 'done' ? (
-                            <CheckIcon weight="bold" />
-                        ) : n.kind === 'dream' ? (
-                            <HeadphonesIcon weight="duotone" />
-                        ) : st === 'locked' ? (
-                            <LockSimpleIcon />
-                        ) : (
-                            n.id
-                        );
-                    return (
-                        <div key={n.id} className={`path-step ${st}`}>
-                            <button
-                                className="node"
-                                onClick={() => openSheet({ type: 'node', id: n.id })}
-                                aria-label={n.title}
-                            >
-                                {icon}
-                            </button>
-                            <span>{n.title}</span>
-                        </div>
-                    );
-                })}
-            </div>
-        </section>
-    );
-}
-
-function FamilyTasks({ game }: { game: GameState }) {
-    const action = useGameAction();
-    const flash = useUi((s) => s.flash);
-    const tasks = [...game.tasks].reverse();
-
-    return (
-        <section className="section">
-            <h2 className="h2">Задания от мамы</h2>
-            <p className="small">Сделай и нажми «Готово». Мама проверит и переведёт деньги на твою карту.</p>
-            <div>
-                {tasks.map((task) => {
-                    const Icon = TASK_ICONS[task.icon];
-                    return (
-                        <div key={task.id} className="task-row">
-                            <Icon
-                                size={26}
-                                weight="duotone"
-                                color={task.status === 'paid' ? 'var(--faint)' : 'var(--accent-700)'}
-                            />
-                            <div className="grow">
-                                <span className="title">{task.title}</span>
-                                <span className="small num">
-                                    {byn(task.byn)} BYN + {task.byn / 10} MTcoin
-                                </span>
-                                {task.status === 'open' && task.returned && (
-                                    <span className="returned">Мама вернула: доделай, пожалуйста</span>
-                                )}
-                            </div>
-                            {task.status === 'open' && (
-                                <button
-                                    className="btn small"
-                                    onClick={() => {
-                                        action.mutate({ type: 'task/submit', id: task.id });
-                                        flash('Отправлено маме на проверку');
-                                    }}
-                                >
-                                    Готово
-                                </button>
-                            )}
-                            {task.status === 'review' && <span className="badge">На проверке</span>}
-                            {task.status === 'paid' && <span className="badge ok">Оплачено</span>}
-                        </div>
-                    );
-                })}
-            </div>
-            {game.gradesOn && game.gradeFeed.length > 0 && (
-                <div className="stack" style={{ gap: 4 }}>
-                    <span className="kicker" style={{ marginTop: 6 }}>
-                        За оценки
-                    </span>
-                    {[...game.gradeFeed].reverse().map((g, i) => (
-                        <div key={i} className="row" style={{ padding: '6px 0' }}>
-                            <span
-                                className="num"
-                                style={{ width: 36, fontSize: 24, fontWeight: 700, color: 'var(--accent-700)' }}
-                            >
-                                {g.g}
-                            </span>
-                            <span style={{ flex: 1, fontSize: 15 }}>{g.subj}</span>
-                            <b className="num" style={{ fontSize: 14 }}>
-                                {g.amt ? `+${byn(g.amt)} BYN` : '—'}
-                            </b>
-                        </div>
-                    ))}
+        <div className="map-bottom">
+            <div className="dock">
+                <span className="kicker accent-2">
+                    Шаг {cur.id} · {KICKERS[cur.kind]}
+                </span>
+                <span className="dock-title">{cur.title}</span>
+                <div className="row" style={{ gap: 8 }}>
+                    <button
+                        className="btn small"
+                        style={{ flex: 1 }}
+                        onClick={() => openSheet({ type: 'node', id: cur.id })}
+                    >
+                        {cur.kind === 'chest' ? 'Открыть сундук' : cur.kind === 'next' ? 'Подробнее' : 'Начать'}
+                    </button>
+                    <button className="dock-btn" onClick={() => openSheet({ type: 'path' })}>
+                        <PathIcon size={22} weight="duotone" />
+                        Путь
+                    </button>
+                    <button className="dock-btn" onClick={() => openSheet({ type: 'tasks' })}>
+                        <CheckSquareIcon size={22} weight="duotone" />
+                        Задания
+                        {openTasks > 0 && <span className="count">{openTasks}</span>}
+                    </button>
                 </div>
-            )}
-        </section>
-    );
-}
-
-function City({ level }: { level: number }) {
-    const openSheet = useUi((s) => s.openSheet);
-    const flash = useUi((s) => s.flash);
-
-    return (
-        <section className="section">
-            <h2 className="h2">Город</h2>
-            <p className="small">
-                Здесь тратишь и зарабатываешь то, что выучил на пути. Новые здания открываются с уровнем.
-            </p>
-            <div className="city-grid">
-                {BUILDINGS.map((b) => {
-                    const Icon = BUILDING_ICONS[b.id];
-                    const locked = level < b.minBankLevel;
-                    return (
-                        <button
-                            key={b.id}
-                            className={`building ${locked ? 'locked' : ''}`}
-                            onClick={() =>
-                                locked
-                                    ? flash(`${b.name} откроется на уровне ${b.minBankLevel}`)
-                                    : openSheet({ type: 'building', id: b.id })
-                            }
-                        >
-                            <div className="tile">
-                                <Icon size={34} weight="duotone" />
-                                {locked && <span className="lvl">ур. {b.minBankLevel}</span>}
-                            </div>
-                            <span className="name">{b.name}</span>
-                        </button>
-                    );
-                })}
             </div>
-        </section>
+        </div>
     );
 }

@@ -3,18 +3,11 @@ import { CheckIcon, HandHeartIcon, HeadphonesIcon, PercentIcon, PiggyBankIcon } 
 import { useGameAction } from '../../api/hooks';
 import { useUi } from '../../store/ui';
 import { Sheet } from '../components/Sheet';
+import { FamilyTasks, KICKERS, PathStrip } from './Parts';
 import { byn, coins } from '../format';
 import { Bank } from '../screens/Bank';
 import { Shop } from '../screens/Shop';
 import { BusinessBuilder, Jobs, LegalCenter, Market, Medical } from '../screens/placeholders';
-
-const KICKERS = {
-    lesson: 'Урок',
-    dream: 'Квест · симуляция',
-    quiz: 'Урок · квиз',
-    chest: 'Награда недели',
-    next: 'Следующий уровень',
-} as const;
 
 export function ChildSheets({ me, game }: { me: PlayerDto; game: GameState }) {
     const sheet = useUi((s) => s.sheet);
@@ -28,6 +21,19 @@ export function ChildSheets({ me, game }: { me: PlayerDto; game: GameState }) {
             return <WeekSheet game={game} />;
         case 'profile':
             return <ProfileSheet me={me} game={game} />;
+        case 'path':
+            return (
+                <Sheet>
+                    <span className="h1">Путь</span>
+                    <PathStrip game={game} />
+                </Sheet>
+            );
+        case 'tasks':
+            return (
+                <Sheet>
+                    <FamilyTasks game={game} />
+                </Sheet>
+            );
         case 'building':
             switch (sheet.id) {
                 case 'bank':
