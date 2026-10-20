@@ -77,7 +77,7 @@ export function FamilyTasks({ game }: { game: GameState }) {
                             <Icon
                                 size={26}
                                 weight="duotone"
-                                color={task.status === 'paid' ? 'var(--faint)' : 'var(--accent-700)'}
+                                color={task.status === 'paid' ? 'var(--n-500)' : 'var(--accent-700)'}
                             />
                             <div className="grow">
                                 <span className="title">{task.title}</span>

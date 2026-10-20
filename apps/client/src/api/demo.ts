@@ -35,7 +35,7 @@ import {
 import type { z } from 'zod';
 import { ApiRequestError } from './client';
 
-const KEY = 'mt-city:demo-state:v2';
+const KEY = 'mt-city:demo-state:v3';
 const DAY_MS = DAY_MS_DEFAULT;
 
 interface DemoState {

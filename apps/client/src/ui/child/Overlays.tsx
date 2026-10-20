@@ -109,7 +109,7 @@ function DreamQuest() {
                                     m < month || (phase !== 'play' && m <= month)
                                         ? 'var(--accent-2)'
                                         : m === month
-                                          ? 'var(--accent-2-300)'
+                                          ? 'rgba(224, 33, 138, 0.45)'
                                           : 'var(--surface)',
                             }}
                         />
@@ -130,7 +130,7 @@ function DreamQuest() {
                             flex: 'none',
                             borderRadius: 'var(--radius-lg)',
                             background:
-                                'repeating-linear-gradient(135deg, var(--surface) 0 6px, var(--paper) 6px 12px)',
+                                'repeating-linear-gradient(135deg, var(--surface) 0 6px, var(--surface-2) 6px 12px)',
                             display: 'grid',
                             placeItems: 'center',
                             color: 'var(--accent-2)',
@@ -328,7 +328,7 @@ function Quiz() {
                         {answered && (
                             <div className="guide">
                                 <div className="guide-face">К</div>
-                                <p className="body" style={{ color: ok ? 'var(--accent-800)' : 'var(--accent-2-800)' }}>
+                                <p className="body" style={{ color: ok ? 'var(--accent-800)' : 'var(--accent-2-700)' }}>
                                     {ok ? `Верно! ${item.hint}` : `Не совсем. ${item.hint} Попробуй ещё раз.`}
                                 </p>
                             </div>

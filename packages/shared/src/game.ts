@@ -14,6 +14,8 @@ export interface FamilyTask {
     /** Родитель вернул на доработку */
     returned: boolean;
     icon: TaskIcon;
+    /** Когда ребёнок нажал «Готово», мс */
+    submittedAt?: number;
 }
 
 export interface GradeEntry {
@@ -40,6 +42,8 @@ export interface GameState {
     dreamDone: boolean;
     quizDone: boolean;
     chestOpened: boolean;
+    /** Собранные бонусы над зданиями города (id здания → собран) */
+    collected: Record<string, boolean>;
 }
 
 export type GameAction =
@@ -52,7 +56,8 @@ export type GameAction =
     | { type: 'grades/pull' }
     | { type: 'dream/complete' }
     | { type: 'quiz/complete' }
-    | { type: 'chest/open' };
+    | { type: 'chest/open' }
+    | { type: 'city/collect'; id: string };
 
 /** 1 BYN награды = 10 MTcoin в игре */
 export const COINS_PER_BYN = 10;
@@ -62,6 +67,8 @@ export const REWARDS = {
     chest: { coins: 10_000 },
     lesson: { knowledge: 20 },
 } as const;
+/** Бонусы над зданиями на карте, копейки MTcoin (Копилка +3, Cofix +12) */
+export const CITY_BONUSES: Record<string, number> = { bank: 300, cofix: 1_200 };
 export const GRADE_STEP = 50;
 export const GRADE_MAX = 1_000;
 export const GRADES = [10, 9, 8] as const;
@@ -75,7 +82,15 @@ export const initialGame = (): GameState => ({
     tasks: [
         { id: 't1', title: 'Вынести мусор', byn: 200, status: 'paid', returned: false, icon: 'trash' },
         { id: 't2', title: 'Пропылесосить в квартире', byn: 300, status: 'open', returned: false, icon: 'broom' },
-        { id: 't3', title: 'Помыть пол', byn: 400, status: 'open', returned: false, icon: 'drop' },
+        {
+            id: 't3',
+            title: 'Помыть пол',
+            byn: 400,
+            status: 'review',
+            returned: false,
+            icon: 'drop',
+            submittedAt: Date.now() - 10 * 60_000,
+        },
     ],
     gradesOn: true,
     rules: { 10: 200, 9: 100, 8: 50 },
@@ -84,6 +99,7 @@ export const initialGame = (): GameState => ({
     dreamDone: false,
     quizDone: false,
     chestOpened: false,
+    collected: {},
 });
 
 /** Отметки, которые «приходят из электронного дневника» в демо */
@@ -94,10 +110,11 @@ export const DIARY = [
     { subj: 'Чтение', g: 9 },
 ];
 
-export const TASK_PRESETS: { label: string; title: string; icon: TaskIcon }[] = [
-    { label: 'Вынести мусор', title: 'Вынести мусор', icon: 'trash' },
-    { label: 'Помыть пол', title: 'Помыть пол', icon: 'drop' },
-    { label: 'Пропылесосить', title: 'Пропылесосить в квартире', icon: 'broom' },
+/** Шаблоны заданий для родителя: подсказка «сколько обычно платят» и сумма по умолчанию, копейки BYN */
+export const TASK_PRESETS: { label: string; title: string; icon: TaskIcon; hint: string; byn: number }[] = [
+    { label: 'Вынести мусор', title: 'Вынести мусор', icon: 'trash', hint: 'обычно 1–2 BYN', byn: 150 },
+    { label: 'Помыть пол', title: 'Помыть пол', icon: 'drop', hint: 'обычно 3–5 BYN', byn: 400 },
+    { label: 'Пропылесосить', title: 'Пропылесосить в квартире', icon: 'broom', hint: 'обычно 2–4 BYN', byn: 300 },
 ];
 
 // ---------- Путь ----------
@@ -240,7 +257,7 @@ export function applyGameAction(s: GameState, a: GameAction): GameState {
         case 'task/submit': {
             const t = s.tasks.find((x) => x.id === a.id);
             if (t?.status !== 'open') return s;
-            return { ...s, tasks: updateTask(s, a.id, { status: 'review', returned: false }) };
+            return { ...s, tasks: updateTask(s, a.id, { status: 'review', returned: false, submittedAt: Date.now() }) };
         }
         case 'task/approve': {
             const t = s.tasks.find((x) => x.id === a.id);
@@ -295,6 +312,11 @@ export function applyGameAction(s: GameState, a: GameAction): GameState {
         case 'quiz/complete':
             if (s.quizDone) return s;
             return { ...s, quizDone: true, knowledge: s.knowledge + REWARDS.quiz.knowledge };
+        case 'city/collect': {
+            const bonus = CITY_BONUSES[a.id];
+            if (!bonus || s.collected?.[a.id]) return s;
+            return { ...s, coins: s.coins + bonus, collected: { ...s.collected, [a.id]: true } };
+        }
         case 'chest/open': {
             const chest = PATH.find((n) => n.kind === 'chest')!;
             if (nodeStatus(s, chest) !== 'current') return s;

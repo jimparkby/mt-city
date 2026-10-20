@@ -1,9 +1,10 @@
-import { BUILDINGS, PATH, nodeStatus, weekQuests, type GameState, type PlayerDto } from '@mt/shared';
+import { BUILDINGS, PATH, type BuildingId, nodeStatus, weekQuests, type GameState, type PlayerDto } from '@mt/shared';
 import { CheckIcon, HandHeartIcon, HeadphonesIcon, PercentIcon, PiggyBankIcon } from '@phosphor-icons/react';
 import { useGameAction } from '../../api/hooks';
 import { useUi } from '../../store/ui';
 import { Sheet } from '../components/Sheet';
 import { FamilyTasks, KICKERS, PathStrip } from './Parts';
+import { MAP_BUILDINGS, buildingName, minLevel } from './cityArt';
 import { byn, coins } from '../format';
 import { Bank } from '../screens/Bank';
 import { Shop } from '../screens/Shop';
@@ -35,6 +36,8 @@ export function ChildSheets({ me, game }: { me: PlayerDto; game: GameState }) {
                 </Sheet>
             );
         case 'building':
+            return <BuildingSheet id={sheet.id} level={game.level} />;
+        case 'screen':
             switch (sheet.id) {
                 case 'bank':
                     return <Bank onClose={close} />;
@@ -60,6 +63,31 @@ export function ChildSheets({ me, game }: { me: PlayerDto; game: GameState }) {
                     return <LegalCenter onClose={close} />;
             }
     }
+}
+
+/** Карточка здания (как в макете v3): статус, описание и вход */
+function BuildingSheet({ id, level }: { id: BuildingId; level: number }) {
+    const openSheet = useUi((s) => s.openSheet);
+    const close = useUi((s) => s.closeSheet);
+    const b = MAP_BUILDINGS.find((x) => x.id === id)!;
+    const locked = level < minLevel(id);
+    const kicker = locked ? `Строится · откроется на уровне ${minLevel(id)}` : id === 'plot' ? 'Твоя земля' : 'Открыто';
+
+    return (
+        <Sheet>
+            <span className="kicker">{kicker}</span>
+            <span className="h1" style={{ marginTop: -8 }}>
+                {buildingName(id)}
+            </span>
+            <p className="body">{b.desc}</p>
+            <button
+                className={`btn ${locked ? 'ghost' : ''}`}
+                onClick={() => (locked ? close() : openSheet({ type: 'screen', id }))}
+            >
+                {locked ? 'Понятно' : b.btn}
+            </button>
+        </Sheet>
+    );
 }
 
 function NodeSheet({ id, game }: { id: number; game: GameState }) {
@@ -155,7 +183,7 @@ function WeekSheet({ game }: { game: GameState }) {
                                 alignItems: 'center',
                                 justifyContent: 'center',
                                 background: q.done ? 'var(--accent)' : 'transparent',
-                                border: q.done ? 0 : '1.5px solid var(--line)',
+                                border: q.done ? 0 : '1.5px solid var(--n-400)',
                                 color: '#fff',
                                 fontSize: 13,
                             }}
@@ -166,7 +194,7 @@ function WeekSheet({ game }: { game: GameState }) {
                             style={{
                                 flex: 1,
                                 fontSize: 15,
-                                color: q.done ? 'var(--faint)' : 'var(--text)',
+                                color: q.done ? 'var(--n-500)' : 'var(--text)',
                                 textDecoration: q.done ? 'line-through' : 'none',
                             }}
                         >

@@ -76,3 +76,12 @@ describe('оценки', () => {
         expect(s.rules[8]).toBe(0);
     });
 });
+
+describe('бонусы в городе', () => {
+    it('собираются один раз', () => {
+        const s0 = initialGame();
+        const s = run(s0, { type: 'city/collect', id: 'cofix' }, { type: 'city/collect', id: 'cofix' });
+        expect(s.coins).toBe(s0.coins + 1_200);
+        expect(applyGameAction(s0, { type: 'city/collect', id: 'legal' })).toBe(s0);
+    });
+});
