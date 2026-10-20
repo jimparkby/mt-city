@@ -11,6 +11,8 @@ export default defineConfig({
             registerType: 'autoUpdate',
             manifest: false,
             workbox: {
+                skipWaiting: true,
+                clientsClaim: true,
                 globPatterns: ['**/*.{js,css,html,png,jpg,webp,svg,json,tmj}'],
                 maximumFileSizeToCacheInBytes: 5 * 1024 * 1024,
             },
