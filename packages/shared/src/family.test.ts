@@ -67,17 +67,22 @@ describe('Moby Семья: просьбы ребёнка и карманные �
 });
 
 describe('Moby Семья: подписки', () => {
-    it('подписка подростка ждёт согласия и после него появляется в списке семьи', () => {
+    it('подписка ребёнка 7–13 ждёт согласия и после него появляется в списке семьи', () => {
         const g = initialGame();
         const s0 = applyGameAction(g, {
             type: 'controls/set',
             patch: { features: { ...g.controls.features, online: true }, cats: { ...g.controls.cats, games: true } },
         });
-        const s1 = applyGameAction(s0, { type: 'op/pay', merchant: 'music', teen: true });
+        const s1 = applyGameAction(s0, { type: 'op/pay', merchant: 'music' });
         expect(s1.ops[0].status).toBe('pending');
-        const s2 = applyGameAction(s1, { type: 'op/approve', id: s1.ops[0].id, teen: true });
+        const s2 = applyGameAction(s1, { type: 'op/approve', id: s1.ops[0].id });
         expect(s2.subs.length).toBe(s0.subs.length + 1);
-        expect(s2.subs.at(-1)).toMatchObject({ who: 'teen', kind: 'music', amt: 499 });
+        expect(s2.subs.at(-1)).toMatchObject({ who: 'kid', kind: 'music', amt: 499 });
+
+        // Подросток 14–17 подключает подписку сам, без согласия
+        const s3 = applyGameAction(s0, { type: 'op/pay', merchant: 'music', teen: true });
+        expect(s3.ops[0].status).toBe('done');
+        expect(s3.subs.at(-1)).toMatchObject({ who: 'teen', kind: 'music' });
     });
 
     it('итог считает только активные подписки, по каждому члену семьи', () => {

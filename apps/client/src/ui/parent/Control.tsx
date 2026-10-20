@@ -212,9 +212,14 @@ export function ControlTab({ game }: { game: GameState }) {
                         />
                     ))}
                     <SwitchRow
-                        title="Новые подписки — с моего согласия"
-                        hint="Списание начнётся, только когда вы разрешите"
-                        on={c.subsApproval}
+                        title="Подписки — с моего согласия"
+                        hint={
+                            teen
+                                ? 'С 14 лет подписки подключаются без согласия — вы видите их в «Подписках семьи»'
+                                : 'Списание начнётся, только когда вы разрешите'
+                        }
+                        on={!teen && c.subsApproval}
+                        locked={teen}
                         onToggle={() => set({ subsApproval: !c.subsApproval })}
                     />
                 </div>

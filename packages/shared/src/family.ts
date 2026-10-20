@@ -339,7 +339,7 @@ const nid = (p: string) => `${p}${Date.now().toString(36)}${++seq}`;
 export const childCardTail = (s: FamilyState) => String(7310 + s.reissued * 137).slice(-4);
 
 /** Решение по покупке: проходит, отклоняется (с причиной) или ждёт подтверждения родителя */
-export function checkPurchase(s: GameState, m: Merchant): { status: OpStatus; reason?: string } {
+export function checkPurchase(s: GameState, m: Merchant, teen = false): { status: OpStatus; reason?: string } {
     const c = s.controls;
     const cat = SPEND_CATS.find((x) => x.id === m.cat)!;
     if (c.blocked)
@@ -353,7 +353,9 @@ export function checkPurchase(s: GameState, m: Merchant): { status: OpStatus; re
     if (m.amt > s.byn) return { status: 'declined', reason: 'Недостаточно денег на карте' };
     if (s.spent.day + m.amt > c.dayLimit) return { status: 'declined', reason: 'Превышен дневной лимит' };
     if (s.spent.month + m.amt > c.monthLimit) return { status: 'declined', reason: 'Превышен месячный лимит' };
-    if (m.sub && c.subsApproval) return { status: 'pending', reason: 'Новая подписка — нужно согласие родителя' };
+    // Подписки 7–13 лет — только с согласия родителя; подросток 14+ подключает сам, родитель видит их в «Подписках семьи»
+    if (m.sub && c.subsApproval && !teen)
+        return { status: 'pending', reason: 'Новая подписка — нужно согласие родителя' };
     if (c.approveOver > 0 && m.amt > c.approveOver) return { status: 'pending', reason: 'Ждёт подтверждения родителя' };
     return { status: 'done' };
 }
@@ -411,7 +413,7 @@ export function applyFamily(s: GameState, a: FamilyAction, teenCb: number): Game
         case 'op/pay': {
             const m = MERCHANTS.find((x) => x.id === a.merchant);
             if (!m || !s.pkg) return s;
-            const r = checkPurchase(s, m);
+            const r = checkPurchase(s, m, !!a.teen);
             const who: Member = a.teen ? 'teen' : 'kid';
             const op: CardOp = {
                 id: nid('o'),

@@ -39,7 +39,7 @@ function PaySheet({ game }: { game: GameState }) {
                             key={m.id}
                             className="merchant"
                             onClick={() => {
-                                const r = checkPurchase(game, m);
+                                const r = checkPurchase(game, m, teen);
                                 action.mutate({ type: 'op/pay', merchant: m.id, teen });
                                 set({ bankSheet: null });
                                 flash(

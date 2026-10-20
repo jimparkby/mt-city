@@ -200,8 +200,8 @@ export function Subscriptions({ game }: { game: GameState }) {
                 {isParent ? (
                     <div className="list-card">
                         <SwitchRow
-                            title="Новые подписки детей — с моего согласия"
-                            hint="Ребёнок оформляет подписку, а списание начнётся, только когда вы разрешите"
+                            title="Подписки 7–13 лет — с моего согласия"
+                            hint={`Списание начнётся, только когда вы разрешите. ${TEEN.name} (14–17) подключает подписки сам — они всё равно видны здесь`}
                             on={game.controls.subsApproval}
                             onToggle={() =>
                                 action.mutate({
@@ -213,9 +213,9 @@ export function Subscriptions({ game }: { game: GameState }) {
                     </div>
                 ) : (
                     <span className="tiny muted">
-                        {game.controls.subsApproval
+                        {game.controls.subsApproval && own === 'kid'
                             ? 'Новую подписку мама подтверждает в своём Moby — без её согласия деньги не спишутся.'
-                            : 'Следи за подписками: каждая списывает деньги каждый месяц.'}
+                            : 'Ты подключаешь подписки сам, а мама видит их в Moby Семье. Каждая списывает деньги каждый месяц — следи за итогом.'}
                     </span>
                 )}
                 {shown !== totals.total && filter !== 'all' && (
