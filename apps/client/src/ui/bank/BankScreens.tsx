@@ -1,7 +1,7 @@
 // Оболочка Moby для демо: главная, продукты, чат и «Ещё». В пилоте это экраны самого приложения банка,
 // а МТ Сити открывается в нём как WebView.
 
-import { CARD_TIERS, SHOP, tierIndex, weekQuests, type GameState } from '@mt/shared';
+import { CARD_TIERS, SHOP, subsTotals, tierIndex, weekQuests, type GameState } from '@mt/shared';
 import {
     ArrowRightIcon,
     ArrowUpRightIcon,
@@ -37,6 +37,7 @@ import {
     HandCoinsIcon,
     LockSimpleIcon,
     StarIcon,
+    RepeatIcon,
     type Icon,
 } from '@phosphor-icons/react';
 import { useUi, type BankTab } from '../../store/ui';
@@ -337,6 +338,12 @@ export function BankProducts({ game }: { game: GameState }) {
                       go: toCity,
                   },
                   {
+                      title: 'Подписки семьи',
+                      sub: `${byn(subsTotals(game.subs).total)} BYN в месяц · кто что подключил`,
+                      Icon: RepeatIcon,
+                      go: () => set({ page: 'subs' }),
+                  },
+                  {
                       title: 'Партнёры и баллы',
                       sub: 'Скидки и семейный кешбэк у партнёров',
                       Icon: StarIcon,
@@ -371,6 +378,12 @@ export function BankProducts({ game }: { game: GameState }) {
                             },
                         ]
                       : []),
+                  {
+                      title: 'Мои подписки',
+                      sub: `${byn(subsTotals(game.subs.filter((x) => x.who === (teen ? 'teen' : 'kid'))).total)} BYN в месяц`,
+                      Icon: RepeatIcon,
+                      go: () => set({ page: 'subs' }),
+                  },
                   {
                       title: 'Партнёры и баллы',
                       sub: 'Скидки и баллы у партнёров семьи',

@@ -3801,3 +3801,93 @@ input {
 .partner-banner svg {
     flex: none;
 }
+
+/* ---------- Подписки семьи ---------- */
+
+.subs-hero {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    padding: 16px 18px;
+    border-radius: 22px;
+    background: linear-gradient(135deg, #2f6bf0 0%, #1d3f99 55%, #5a1260 100%);
+    box-shadow: var(--shadow-md);
+}
+
+.subs-hero .tiny {
+    color: rgba(255, 255, 255, 0.8);
+}
+
+.subs-bar {
+    display: flex;
+    gap: 3px;
+    height: 10px;
+    border-radius: 5px;
+    overflow: hidden;
+    background: rgba(0, 0, 0, 0.25);
+}
+
+.subs-legend {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px 14px;
+    font-size: 13px;
+}
+
+.subs-legend span {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.subs-legend i {
+    width: 10px;
+    height: 10px;
+    border-radius: 3px;
+}
+
+.seg-btn.filter-chip {
+    flex: none;
+    padding: 0 14px;
+}
+
+.sub-row {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    padding: 12px 14px;
+    border-radius: 18px;
+    background: var(--surface);
+    font-size: 15px;
+}
+
+.sub-row.paused {
+    opacity: 0.6;
+}
+
+.sub-icon {
+    width: 42px;
+    height: 42px;
+    flex: none;
+    border-radius: 12px;
+    background: var(--surface-2);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.sub-act {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 12px;
+    text-decoration: none;
+}
+
+.sub-act.danger {
+    color: var(--accent-2-700);
+}
+
+.points-card.subs {
+    background: linear-gradient(110deg, #23252f 0%, #1d2c66 100%);
+}

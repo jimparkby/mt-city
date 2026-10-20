@@ -1,11 +1,12 @@
 import { useState } from 'react';
-import { CARD_TIERS, FEATURES, INSURANCE, childCardTail, tierIndex, type GameState } from '@mt/shared';
+import { CARD_TIERS, FEATURES, INSURANCE, childCardTail, subsTotals, tierIndex, type GameState } from '@mt/shared';
 import {
     CaretLeftIcon,
     CheckCircleIcon,
     HeartbeatIcon,
     LockSimpleIcon,
     PhoneCallIcon,
+    RepeatIcon,
     SnowflakeIcon,
     WarningIcon,
     XCircleIcon,
@@ -129,6 +130,18 @@ export function ChildCard({ game }: { game: GameState }) {
                         </span>
                     </div>
                 )}
+
+                <button className="points-card subs" onClick={() => set({ page: 'subs' })}>
+                    <RepeatIcon size={26} weight="duotone" color="var(--accent-700)" />
+                    <div className="stack grow" style={{ gap: 2 }}>
+                        <b>
+                            Мои подписки:{' '}
+                            {byn(subsTotals(game.subs.filter((x) => x.who === (teen ? 'teen' : 'kid'))).total)} BYN в
+                            месяц
+                        </b>
+                        <span className="tiny muted">Сколько списывается каждый месяц</span>
+                    </div>
+                </button>
 
                 <div className="stack" style={{ gap: 4 }}>
                     <span className="h2" style={{ marginBottom: 6 }}>

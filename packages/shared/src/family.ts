@@ -42,6 +42,8 @@ export interface Controls {
     monthLimit: number;
     /** Покупки дороже этой суммы ждут подтверждения родителя; 0 — без подтверждения */
     approveOver: number;
+    /** Новые подписки ребёнка — только с согласия родителя */
+    subsApproval: boolean;
     cats: Record<SpendCat, boolean>;
     features: Record<Feature, boolean>;
     products: Record<ChildProduct, boolean>;
@@ -58,6 +60,32 @@ export interface FamilyPackage {
 
 export type OpStatus = 'done' | 'declined' | 'pending' | 'disputed';
 
+/** Кто в семье подключил подписку */
+export type Member = 'parent' | 'kid' | 'teen';
+
+export interface Subscription {
+    id: string;
+    name: string;
+    /** Музыка, кино, игры, облако — для подсказок о дублях */
+    kind: 'music' | 'video' | 'games' | 'cloud' | 'edu';
+    who: Member;
+    /** Платёж в месяц, копейки BYN */
+    amt: number;
+    /** День месяца списания */
+    day: number;
+    status: 'active' | 'paused';
+    /** Подключена по семейному тарифу или бесплатно у партнёра */
+    note?: string;
+}
+
+export const SUB_KINDS: Record<Subscription['kind'], string> = {
+    music: 'Музыка',
+    video: 'Кино и сериалы',
+    games: 'Игры',
+    cloud: 'Облако',
+    edu: 'Обучение',
+};
+
 export interface CardOp {
     id: string;
     title: string;
@@ -69,6 +97,9 @@ export interface CardOp {
     reason?: string;
     partner?: string;
     at: number;
+    /** Покупка оформляет подписку */
+    sub?: Subscription['kind'];
+    who?: Member;
 }
 
 export interface ChildRequest {
@@ -100,6 +131,7 @@ export interface FamilyState {
     insurance: boolean;
     /** Сколько раз карту перевыпускали — меняет последние цифры номера */
     reissued: number;
+    subs: Subscription[];
 }
 
 export type FamilyAction =
@@ -117,7 +149,9 @@ export type FamilyAction =
     | { type: 'req/resolve'; id: string; ok: boolean }
     | { type: 'pocket/set'; patch: Partial<Pocket> }
     | { type: 'pocket/pay' }
-    | { type: 'insurance/set'; on: boolean };
+    | { type: 'insurance/set'; on: boolean }
+    | { type: 'sub/cancel'; id: string }
+    | { type: 'sub/pause'; id: string };
 
 /** Стоимость страховки ребёнка в месяц и покрытие (условия в демо приблизительные) */
 export const INSURANCE = { monthly: 200, cover: 500_000 };
@@ -178,6 +212,8 @@ export const PARTNERS: Partner[] = [
 ];
 
 export interface Merchant {
+    /** Покупка — это подписка с ежемесячным списанием */
+    sub?: Subscription['kind'];
     id: string;
     title: string;
     cat: SpendCat;
@@ -197,6 +233,7 @@ export const MERCHANTS: Merchant[] = [
     { id: 'sneakers', title: 'Кроссовки в интернет-магазине', cat: 'shops', amt: 9_500, online: true },
     { id: 'casino', title: 'Онлайн-казино', cat: 'gambling', amt: 2_000, online: true },
     { id: 'vape', title: 'Вейп-шоп', cat: 'adult', amt: 3_500 },
+    { id: 'music', title: 'Подписка на музыку', cat: 'games', amt: 499, online: true, sub: 'music' },
 ];
 
 export function defaultControls(age: AgeGroup): Controls {
@@ -211,6 +248,7 @@ export function defaultControls(age: AgeGroup): Controls {
         cats: { food: true, transport: true, shops: true, fun: true, games: teen, gambling: false, adult: false },
         features: { online: teen, cash: teen, transfers: teen },
         products: { kopilka: true, deposits: true },
+        subsApproval: true,
     };
 }
 
@@ -256,6 +294,41 @@ export const initialFamily = (): FamilyState => {
         spent: { day: 450, month: 3_120 },
         insurance: false,
         reissued: 0,
+        subs: [
+            {
+                id: 's1',
+                name: 'Онлайн-кинотеатр · семейный',
+                kind: 'video',
+                who: 'parent',
+                amt: 1_990,
+                day: 5,
+                status: 'active',
+            },
+            { id: 's2', name: 'Музыка', kind: 'music', who: 'parent', amt: 799, day: 12, status: 'active' },
+            { id: 's3', name: 'Облако для фото', kind: 'cloud', who: 'parent', amt: 499, day: 20, status: 'active' },
+            {
+                id: 's4',
+                name: 'Детский онлайн-кинотеатр',
+                kind: 'video',
+                who: 'kid',
+                amt: 0,
+                day: 3,
+                status: 'active',
+                note: 'бесплатно 3 месяца у партнёра',
+            },
+            { id: 's5', name: 'Боевой пропуск в игре', kind: 'games', who: 'kid', amt: 990, day: 15, status: 'active' },
+            { id: 's6', name: 'Музыка', kind: 'music', who: 'teen', amt: 499, day: 9, status: 'active' },
+            { id: 's7', name: 'Игровая подписка', kind: 'games', who: 'teen', amt: 1_490, day: 25, status: 'active' },
+            {
+                id: 's8',
+                name: 'Английский с репетитором онлайн',
+                kind: 'edu',
+                who: 'teen',
+                amt: 2_500,
+                day: 1,
+                status: 'paused',
+            },
+        ],
     };
 };
 
@@ -280,19 +353,35 @@ export function checkPurchase(s: GameState, m: Merchant): { status: OpStatus; re
     if (m.amt > s.byn) return { status: 'declined', reason: 'Недостаточно денег на карте' };
     if (s.spent.day + m.amt > c.dayLimit) return { status: 'declined', reason: 'Превышен дневной лимит' };
     if (s.spent.month + m.amt > c.monthLimit) return { status: 'declined', reason: 'Превышен месячный лимит' };
+    if (m.sub && c.subsApproval) return { status: 'pending', reason: 'Новая подписка — нужно согласие родителя' };
     if (c.approveOver > 0 && m.amt > c.approveOver) return { status: 'pending', reason: 'Ждёт подтверждения родителя' };
     return { status: 'done' };
 }
 
 /** Списание и начисления по проведённой покупке: семейные баллы у партнёров, кешбэк подростка по уровню */
-function settle(s: GameState, m: Merchant, teenCb: number): GameState {
+function settle(s: GameState, m: Merchant, teenCb: number, who: Member): GameState {
     const partner = PARTNERS.find((p) => p.id === m.partner);
     const childPts = partner ? Math.round((m.amt * partner.cb) / 100) : 0;
     // Семейный бонус: родителю 1% от покупок ребёнка у партнёров
     const parentPts = partner ? Math.round(m.amt / 100) : 0;
     const cashback = Math.round((m.amt * teenCb) / 100);
+    const subs: Subscription[] = m.sub
+        ? [
+              ...s.subs,
+              {
+                  id: nid('s'),
+                  name: m.title.replace(/^Подписка на /, '').replace(/^./, (c) => c.toUpperCase()),
+                  kind: m.sub,
+                  who,
+                  amt: m.amt,
+                  day: new Date().getDate(),
+                  status: 'active',
+              },
+          ]
+        : s.subs;
     return {
         ...s,
+        subs,
         byn: s.byn - m.amt + cashback,
         spent: { day: s.spent.day + m.amt, month: s.spent.month + m.amt },
         points: { parent: s.points.parent + parentPts, child: s.points.child + childPts },
@@ -323,6 +412,7 @@ export function applyFamily(s: GameState, a: FamilyAction, teenCb: number): Game
             const m = MERCHANTS.find((x) => x.id === a.merchant);
             if (!m || !s.pkg) return s;
             const r = checkPurchase(s, m);
+            const who: Member = a.teen ? 'teen' : 'kid';
             const op: CardOp = {
                 id: nid('o'),
                 title: m.title,
@@ -332,8 +422,10 @@ export function applyFamily(s: GameState, a: FamilyAction, teenCb: number): Game
                 reason: r.reason,
                 partner: m.partner,
                 at: Date.now(),
+                sub: m.sub,
+                who,
             };
-            const next = r.status === 'done' ? settle(s, m, a.teen ? teenCb : 0) : s;
+            const next = r.status === 'done' ? settle(s, m, a.teen ? teenCb : 0, who) : s;
             return { ...next, ops: [op, ...s.ops] };
         }
         case 'op/approve': {
@@ -345,6 +437,7 @@ export function applyFamily(s: GameState, a: FamilyAction, teenCb: number): Game
                 cat: op.cat as SpendCat,
                 amt: op.amt,
                 partner: op.partner,
+                sub: op.sub,
             };
             if (m.amt > s.byn)
                 return {
@@ -353,7 +446,7 @@ export function applyFamily(s: GameState, a: FamilyAction, teenCb: number): Game
                         o.id === a.id ? { ...o, status: 'declined', reason: 'Недостаточно денег на карте' } : o,
                     ),
                 };
-            const next = settle(s, m, a.teen ? teenCb : 0);
+            const next = settle(s, m, a.teen ? teenCb : 0, op.who ?? (a.teen ? 'teen' : 'kid'));
             return {
                 ...next,
                 ops: s.ops.map((o) => (o.id === a.id ? { ...o, status: 'done', reason: 'Подтверждено родителем' } : o)),
@@ -433,6 +526,15 @@ export function applyFamily(s: GameState, a: FamilyAction, teenCb: number): Game
         case 'pocket/pay':
             if (s.pocket.amt > s.parentCard || !s.pkg) return s;
             return transfer(s, s.pocket.amt, 'Карманные деньги');
+        case 'sub/cancel':
+            return { ...s, subs: s.subs.filter((x) => x.id !== a.id) };
+        case 'sub/pause':
+            return {
+                ...s,
+                subs: s.subs.map((x) =>
+                    x.id === a.id ? { ...x, status: x.status === 'active' ? 'paused' : 'active' } : x,
+                ),
+            };
         case 'insurance/set':
             return { ...s, insurance: a.on };
     }
@@ -441,4 +543,22 @@ export function applyFamily(s: GameState, a: FamilyAction, teenCb: number): Game
 function transfer(s: GameState, amt: number, title: string): GameState {
     const op: CardOp = { id: nid('o'), title, cat: 'income', amt, income: true, status: 'done', at: Date.now() };
     return { ...s, parentCard: s.parentCard - amt, byn: s.byn + amt, ops: [op, ...s.ops] };
+}
+
+/** Сколько уходит на активные подписки в месяц: всего и по каждому члену семьи */
+export function subsTotals(subs: Subscription[]) {
+    const by: Record<Member, number> = { parent: 0, kid: 0, teen: 0 };
+    for (const x of subs) if (x.status === 'active') by[x.who] += x.amt;
+    return { total: by.parent + by.kid + by.teen, by };
+}
+
+/** Одинаковые подписки у нескольких членов семьи: подсказка перейти на семейный тариф */
+export function subDuplicates(subs: Subscription[]) {
+    const out: { kind: Subscription['kind']; who: Member[]; amt: number }[] = [];
+    for (const kind of Object.keys(SUB_KINDS) as Subscription['kind'][]) {
+        const same = subs.filter((x) => x.kind === kind && x.status === 'active' && x.amt > 0);
+        const who = [...new Set(same.map((x) => x.who))];
+        if (who.length > 1) out.push({ kind, who, amt: same.reduce((a, x) => a + x.amt, 0) });
+    }
+    return out;
 }

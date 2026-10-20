@@ -1,5 +1,12 @@
-import { FEATURES, CHILD_PRODUCTS, type ChildRequest, type GameState } from '@mt/shared';
-import { BellRingingIcon, HandCoinsIcon, KeyIcon, ShieldWarningIcon, StarIcon } from '@phosphor-icons/react';
+import { FEATURES, CHILD_PRODUCTS, subsTotals, type ChildRequest, type GameState } from '@mt/shared';
+import {
+    BellRingingIcon,
+    HandCoinsIcon,
+    KeyIcon,
+    RepeatIcon,
+    ShieldWarningIcon,
+    StarIcon,
+} from '@phosphor-icons/react';
 import { useGameAction } from '../../api/hooks';
 import { useUi } from '../../store/ui';
 import { byn } from '../format';
@@ -134,6 +141,15 @@ export function OpsTab({ game }: { game: GameState }) {
                     <b className={declined ? 'neg' : ''}>{declined}</b>
                 </div>
             </div>
+            <button className="points-card subs" onClick={() => set({ page: 'subs' })}>
+                <RepeatIcon size={26} weight="duotone" color="var(--accent-700)" />
+                <div className="stack grow" style={{ gap: 2 }}>
+                    <b>Подписки семьи: {byn(subsTotals(game.subs).total)} BYN в месяц</b>
+                    <span className="tiny muted">
+                        {game.subs.filter((x) => x.status === 'active').length} активных · кто что подключил
+                    </span>
+                </div>
+            </button>
             <button className="points-card" onClick={() => set({ page: 'partners' })}>
                 <StarIcon size={26} weight="fill" color="var(--yellow)" />
                 <div className="stack grow" style={{ gap: 2 }}>

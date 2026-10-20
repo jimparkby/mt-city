@@ -211,6 +211,12 @@ export function ControlTab({ game }: { game: GameState }) {
                             onToggle={() => set({ features: { ...c.features, [f.id]: !c.features[f.id] } })}
                         />
                     ))}
+                    <SwitchRow
+                        title="Новые подписки — с моего согласия"
+                        hint="Списание начнётся, только когда вы разрешите"
+                        on={c.subsApproval}
+                        onToggle={() => set({ subsApproval: !c.subsApproval })}
+                    />
                 </div>
             </div>
 

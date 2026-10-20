@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { subDuplicates, subsTotals } from './family.js';
 import { applyGameAction, initialGame, type GameAction, type GameState } from './game.js';
 
 const run = (s: GameState, ...actions: GameAction[]) => actions.reduce(applyGameAction, s);
@@ -62,5 +63,29 @@ describe('Moby Семья: просьбы ребёнка и карманные �
         const s2 = run(s1, { type: 'req/resolve', id: s1.requests[0].id, ok: true }, { type: 'pocket/pay' });
         expect(s2.byn).toBe(s0.byn + 500 + s0.pocket.amt);
         expect(s2.parentCard).toBe(s0.parentCard - 500 - s0.pocket.amt);
+    });
+});
+
+describe('Moby Семья: подписки', () => {
+    it('подписка подростка ждёт согласия и после него появляется в списке семьи', () => {
+        const g = initialGame();
+        const s0 = applyGameAction(g, {
+            type: 'controls/set',
+            patch: { features: { ...g.controls.features, online: true }, cats: { ...g.controls.cats, games: true } },
+        });
+        const s1 = applyGameAction(s0, { type: 'op/pay', merchant: 'music', teen: true });
+        expect(s1.ops[0].status).toBe('pending');
+        const s2 = applyGameAction(s1, { type: 'op/approve', id: s1.ops[0].id, teen: true });
+        expect(s2.subs.length).toBe(s0.subs.length + 1);
+        expect(s2.subs.at(-1)).toMatchObject({ who: 'teen', kind: 'music', amt: 499 });
+    });
+
+    it('итог считает только активные подписки, по каждому члену семьи', () => {
+        const s = initialGame();
+        const t = subsTotals(s.subs);
+        expect(t.by.parent).toBe(1_990 + 799 + 499);
+        expect(t.by.teen).toBe(499 + 1_490);
+        expect(t.total).toBe(t.by.parent + t.by.kid + t.by.teen);
+        expect(subDuplicates(s.subs).map((d) => d.kind)).toContain('music');
     });
 });

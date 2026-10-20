@@ -10,7 +10,7 @@ export type ShopTab = 'top' | 'hat' | 'card';
 export type Sheet = { type: 'week' } | { type: 'building'; id: string };
 export type Overlay = 'dream' | 'levelup';
 /** Экран Moby поверх вкладки: продукты ребёнка, карта, партнёры */
-export type Page = 'deposits' | 'kopilka' | 'card' | 'partners';
+export type Page = 'deposits' | 'kopilka' | 'card' | 'partners' | 'subs';
 /** Шторки Moby у ребёнка: демо-оплата и просьба к родителю */
 export type BankSheet = 'pay' | 'ask';
 /** Вкладки кабинета родителя */

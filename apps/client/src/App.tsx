@@ -12,6 +12,7 @@ import { ChildBankSheets } from './ui/bank/ChildSheets';
 import { Deposits } from './ui/bank/Deposits';
 import { NoAccess } from './ui/bank/NoAccess';
 import { Partners } from './ui/bank/Partners';
+import { Subscriptions } from './ui/bank/Subscriptions';
 import { Kopilka } from './ui/bank/Kopilka';
 import { resetCity } from './ui/child/cityState';
 import { Game, GameNav } from './ui/child/Game';
@@ -168,6 +169,7 @@ function App() {
                                     {!isParent && ui.page === 'kopilka' && <Kopilka game={game} />}
                                     {!isParent && ui.page === 'card' && <ChildCard game={game} />}
                                     {ui.page === 'partners' && <Partners game={game} />}
+                                    {ui.page === 'subs' && <Subscriptions game={game} />}
                                     {!isParent && <ChildBankSheets game={game} />}
                                 </>
                             )}
