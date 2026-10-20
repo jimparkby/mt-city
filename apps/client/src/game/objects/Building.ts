@@ -1,4 +1,5 @@
 import { GameObjects, Scene } from 'phaser';
+import * as Phaser from 'phaser';
 import type { BuildingDef } from '@mt/shared';
 import { emit } from '../EventBus';
 

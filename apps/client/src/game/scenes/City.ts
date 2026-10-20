@@ -1,4 +1,5 @@
 import { Scene } from 'phaser';
+import * as Phaser from 'phaser';
 import { BUILDINGS, type BuildingId } from '@mt/shared';
 import { EventBus, on } from '../EventBus';
 import { Building, TILE_H, TILE_W, diamond } from '../objects/Building';

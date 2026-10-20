@@ -1,4 +1,5 @@
 import { Scene } from 'phaser';
+import * as Phaser from 'phaser';
 import { emit } from '../../EventBus';
 
 const DURATION_MS = 20_000;
