@@ -6,7 +6,6 @@ export type Role = 'kid' | 'teen' | 'parent';
 export type BankTab = 'home' | 'products' | 'city' | 'chat' | 'more';
 /** Вкладки игры */
 export type GameTab = 'city' | 'tasks' | 'profile';
-export type ShopTab = 'top' | 'hat' | 'card';
 export type Sheet = { type: 'week' } | { type: 'building'; id: string };
 export type Overlay = 'dream' | 'levelup';
 /** Экран Moby поверх вкладки: продукты ребёнка, карта, партнёры */
@@ -39,7 +38,6 @@ interface UiState {
     page: Page | null;
     bankSheet: BankSheet | null;
     parentTab: ParentTab;
-    shopTab: ShopTab;
     hideBalance: boolean;
     /** Обучение с Мони пройдено (по ролям) и текущий шаг */
     onboarded: Partial<Record<Role, boolean>>;
@@ -102,7 +100,6 @@ export const useUi = create<UiState>((set, get) => {
     return {
         role: saved.role ?? 'kid',
         bankTab: saved.bankTab ?? 'home',
-        shopTab: 'top',
         hideBalance: false,
         parentTab: 'tasks',
         onboarded: saved.onboarded ?? {},

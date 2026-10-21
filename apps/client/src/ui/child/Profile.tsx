@@ -1,94 +1,33 @@
-import { CARD_TIERS, SHOP, isOwned, tierIndex, type GameState, type ShopCategory } from '@mt/shared';
-import {
-    BaseballCapIcon,
-    CheckIcon,
-    CoinsIcon,
-    CreditCardIcon,
-    HandHeartIcon,
-    HandTapIcon,
-    HeadphonesIcon,
-    LockSimpleIcon,
-    PercentIcon,
-    PiggyBankIcon,
-    TShirtIcon,
-    type Icon,
-} from '@phosphor-icons/react';
+import { CARD_TIERS, SHOP, isOwned, tierIndex, type GameState } from '@mt/shared';
+import { CheckIcon, CoinsIcon, HandTapIcon, LockSimpleIcon } from '@phosphor-icons/react';
 import { useGameAction } from '../../api/hooks';
-import { useUi, type ShopTab } from '../../store/ui';
+import { useUi } from '../../store/ui';
 import { byn, coins } from '../format';
 import { KID, TEEN, useTeen } from '../roles';
 import { SKIN_LOOKS, TIER_LOOKS, avatarSVG, fullBg } from '../art/avatar';
 import { BankCard, MiniCard } from '../components/BankCard';
 
-/** Профиль: у ребёнка — персонаж и магазин за MTcoin, у подростка — уровни карты и кешбэк по тратам */
+/** Профиль: у ребёнка — персонаж и дизайны карты за MTcoin, у подростка — уровни карты и кешбэк по тратам */
 export function Profile({ game }: { game: GameState }) {
     const teen = useTeen();
-    const approved = game.tasks.filter((t) => t.status === 'paid').length;
-    const badges: [string, boolean, Icon][] = [
-        ['Первый вклад', true, PiggyBankIcon],
-        ['Мечтатель', game.dreamDone, HeadphonesIcon],
-        ['Помощник', approved >= 2, HandHeartIcon],
-        ['Знаток процентов', game.quizDone, PercentIcon],
-    ];
-    const doneList = [
-        { t: 'Откуда берутся деньги', pts: '+20' },
-        { t: 'Нужды и хотелки', pts: '+20' },
-        { t: 'Бюджет на неделю', pts: '+20' },
-        ...(game.dreamDone ? [{ t: 'Накопи на мечту', pts: '+60' }] : []),
-        ...(game.quizDone ? [{ t: 'Копилка и проценты', pts: '+40' }] : []),
-    ];
-
     return (
         <div className="stack" style={{ gap: 22 }}>
             {teen ? <TeenCard game={game} /> : <KidShop game={game} />}
-            <div className="stack" style={{ gap: 12 }}>
-                <span className="h2">Награды</span>
-                <div className="badges">
-                    {badges.map(([t, on, Ico]) => (
-                        <div key={t} className={`award ${on ? 'on' : ''}`}>
-                            <div className="disc">
-                                <Ico size={30} weight="duotone" />
-                            </div>
-                            <span>{t}</span>
-                        </div>
-                    ))}
-                </div>
-            </div>
-            <div className="stack" style={{ gap: 4 }}>
-                <span className="h2" style={{ marginBottom: 6 }}>
-                    Пройдено
-                </span>
-                {doneList.map((d) => (
-                    <div key={d.t} className="done-row">
-                        <span>{d.t}</span>
-                        <b>{d.pts}</b>
-                    </div>
-                ))}
-            </div>
         </div>
     );
 }
 
-const SHOP_TABS: [ShopTab, string, Icon][] = [
-    ['top', 'Одежда', TShirtIcon],
-    ['hat', 'Шапки', BaseballCapIcon],
-    ['card', 'Карта', CreditCardIcon],
-];
-
 function KidShop({ game }: { game: GameState }) {
-    const cat = useUi((s) => s.shopTab);
-    const set = useUi((s) => s.set);
     const flash = useUi((s) => s.flash);
     const action = useGameAction();
     const balance = Math.floor(game.coins / 100);
 
-    const pick = (c: ShopCategory, id: string) => {
-        const it = SHOP[c][id];
-        const on = c === 'card' ? game.skin === id : game.outfit[c] === id;
-        if (on) return;
-        if (isOwned(game, c, id)) return action.mutate({ type: 'shop/equip', cat: c, id });
+    const pick = (id: string) => {
+        const it = SHOP.card[id];
+        if (game.skin === id) return;
+        if (isOwned(game, 'card', id)) return action.mutate({ type: 'shop/equip', cat: 'card', id });
         if (balance < it.price) return flash(`Не хватает ${it.price - balance} MTcoin — выполни задание или квест`);
-        action.mutate({ type: 'shop/buy', cat: c, id });
+        action.mutate({ type: 'shop/buy', cat: 'card', id });
         flash(`Куплено: ${it.name} · −${it.price} MTcoin`);
     };
 
@@ -112,56 +51,29 @@ function KidShop({ game }: { game: GameState }) {
                 </div>
             </div>
             <div className="stack" style={{ gap: 12 }}>
-                <span className="h2">Магазин</span>
-                <div className="row" style={{ gap: 6 }}>
-                    {SHOP_TABS.map(([id, label, Ico]) => (
-                        <button
-                            key={id}
-                            className={`seg-btn ${cat === id ? 'on' : ''}`}
-                            onClick={() => set({ shopTab: id })}
-                        >
-                            <Ico size={18} weight="duotone" />
-                            {label}
-                        </button>
-                    ))}
-                </div>
-                {cat === 'card' && (
-                    <BankCard
-                        look={SKIN_LOOKS[game.skin]}
-                        title="Moby Kids"
-                        subtitle={`Дизайн «${SHOP.card[game.skin].name}»`}
-                        number="5310 •••• •••• 7310"
-                        holder={KID.name.toUpperCase()}
-                        brand="mc"
-                    />
-                )}
+                <span className="h2">Дизайн карты</span>
+                <BankCard
+                    look={SKIN_LOOKS[game.skin]}
+                    title="Moby Kids"
+                    subtitle={`Дизайн «${SHOP.card[game.skin].name}»`}
+                    number="5310 •••• •••• 7310"
+                    holder={KID.name.toUpperCase()}
+                    brand="mc"
+                />
                 <div className="shop-grid">
-                    {Object.entries(SHOP[cat]).map(([id, it]) => {
-                        const isCard = cat === 'card';
-                        const owned = isOwned(game, cat, id);
-                        const on = isCard ? game.skin === id : game.outfit[cat] === id;
+                    {Object.entries(SHOP.card).map(([id, it]) => {
+                        const owned = isOwned(game, 'card', id);
+                        const on = game.skin === id;
                         const can = balance >= it.price;
                         const state = on ? 'on' : owned ? 'owned' : can ? 'can' : 'no';
                         const PriceIcon = on ? CheckIcon : owned ? HandTapIcon : can ? CoinsIcon : LockSimpleIcon;
                         return (
-                            <button key={id} className={`shop-item ${on ? 'on' : ''}`} onClick={() => pick(cat, id)}>
+                            <button key={id} className={`shop-item ${on ? 'on' : ''}`} onClick={() => pick(id)}>
                                 <div
                                     className="shop-tile"
-                                    style={{
-                                        background: isCard
-                                            ? fullBg(SKIN_LOOKS[id as keyof typeof SKIN_LOOKS])
-                                            : undefined,
-                                    }}
+                                    style={{ background: fullBg(SKIN_LOOKS[id as keyof typeof SKIN_LOOKS]) }}
                                 >
-                                    {isCard ? (
-                                        <MiniCard />
-                                    ) : (
-                                        <img
-                                            src={avatarSVG({ ...game.outfit, [cat]: id }, 2.5)}
-                                            alt=""
-                                            draggable={false}
-                                        />
-                                    )}
+                                    <MiniCard />
                                 </div>
                                 <b>{it.name}</b>
                                 <span className={`price ${state}`}>
@@ -169,15 +81,7 @@ function KidShop({ game }: { game: GameState }) {
                                         size={15}
                                         weight={on ? 'bold' : state === 'can' ? 'duotone' : 'regular'}
                                     />
-                                    {on
-                                        ? isCard
-                                            ? 'Выбрано'
-                                            : 'Надето'
-                                        : owned
-                                          ? isCard
-                                              ? 'Выбрать'
-                                              : 'Надеть'
-                                          : `${it.price} MTcoin`}
+                                    {on ? 'Выбрано' : owned ? 'Выбрать' : `${it.price} MTcoin`}
                                 </span>
                             </button>
                         );

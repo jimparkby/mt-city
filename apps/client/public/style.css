@@ -1933,59 +1933,6 @@ input {
     color: var(--n-500);
 }
 
-.badges {
-    display: grid;
-    grid-template-columns: repeat(4, minmax(0, 1fr));
-    gap: 8px;
-}
-
-.award {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 6px;
-    text-align: center;
-    opacity: 0.35;
-}
-
-.award.on {
-    opacity: 1;
-}
-
-.award .disc {
-    width: 60px;
-    height: 60px;
-    border-radius: 20px;
-    background: var(--surface-2);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    color: #fff;
-}
-
-.award.on .disc {
-    background: var(--pink-grad);
-    box-shadow: 0 0 18px rgba(224, 33, 138, 0.4);
-}
-
-.award span {
-    font-size: 12px;
-    line-height: 1.2;
-    color: var(--n-800);
-}
-
-.done-row {
-    display: flex;
-    justify-content: space-between;
-    font-size: 15px;
-    padding: 8px 0;
-    border-bottom: 1px solid rgba(255, 255, 255, 0.06);
-}
-
-.done-row b {
-    color: var(--accent-700);
-}
-
 .cashback {
     position: absolute;
     right: 14px;

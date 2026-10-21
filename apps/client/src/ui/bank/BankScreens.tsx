@@ -93,7 +93,7 @@ export function BankHome({ game }: { game: GameState }) {
           ? next
               ? `Потрать картой ещё ${byn(next.min - game.spent.month)} BYN — и кешбэк ${next.cb}%`
               : 'У тебя максимальный кешбэк 3%'
-          : `Квесты недели ${weekDone} из 5 · в магазине новые вещи`;
+          : `Квесты недели ${weekDone} из 5 · новые дизайны карты`;
 
     interface HomeCard {
         kicker: string;

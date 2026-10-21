@@ -1,4 +1,4 @@
-// Персонаж ребёнка (одежда и шапки из магазина) и оформление карт Moby Kids / Moby Teen.
+// Персонаж ребёнка и оформление карт Moby Kids / Moby Teen.
 
 import type { HatId, SkinId, TopId } from '@mt/shared';
 import { OL, ell, ln, r1, shade, uri } from './svg';
