@@ -82,15 +82,16 @@ function Ring({
     const full = Math.max(total ?? 0, sum) || 1;
     const shown = slices.filter((s) => s.value > 0);
     const gap = shown.length > 1 || sum < full ? GAP : 0;
-    let offset = 0;
+    const lens = shown.map((s) => (s.value / full) * C);
+    // Каждый сегмент начинается там, где закончились предыдущие
+    const starts = lens.map((_, i) => lens.slice(0, i).reduce((a, b) => a + b, 0));
     return (
         <div className={`spend-ring ${className}`}>
             <svg viewBox="0 0 200 200">
                 <circle cx="100" cy="100" r={R} className="spend-ring-track" />
-                {shown.map((s) => {
-                    const len = (s.value / full) * C;
-                    const dash = Math.max(len - gap, 1);
-                    const el = (
+                {shown.map((s, i) => {
+                    const dash = Math.max(lens[i] - gap, 1);
+                    return (
                         <circle
                             key={s.key}
                             cx="100"
@@ -98,11 +99,9 @@ function Ring({
                             r={R}
                             stroke={s.color}
                             strokeDasharray={`${dash} ${C - dash}`}
-                            strokeDashoffset={-offset}
+                            strokeDashoffset={-starts[i]}
                         />
                     );
-                    offset += len;
-                    return el;
                 })}
             </svg>
             <div className="spend-ring-center">{children}</div>
@@ -159,7 +158,7 @@ export function Dream() {
             color: SAVE_COLORS[i % SAVE_COLORS.length],
         }))
         .filter((s) => s.value > 0);
-    const ringSpend =ringTotal - sum('left');
+    const ringSpend = ringTotal - sum('left');
     const ringLabel = range === 'month' ? `траты за месяц ${d.month}` : `траты за ${logs.length} мес.`;
 
     const next = () => {

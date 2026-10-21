@@ -353,7 +353,9 @@ export function BankProducts({ game }: { game: GameState }) {
             : [
                   {
                       title: 'Моя карта',
-                      sub: teen ? 'Moby Teen · кешбэк растёт с тратами по карте' : 'Moby Kids · дизайн из магазина МТ Сити',
+                      sub: teen
+                          ? 'Moby Teen · кешбэк растёт с тратами по карте'
+                          : 'Moby Kids · дизайн из магазина МТ Сити',
                       Icon: CardsIcon,
                       go: () => set({ page: 'card' }),
                   },

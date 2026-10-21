@@ -222,8 +222,8 @@ function TeenCard({ game }: { game: GameState }) {
                     <div style={{ width: `${pct}%` }} />
                 </div>
                 <span className="small">
-                    Кешбэк зависит от трат по карте за месяц: чем больше платишь картой, тем выше процент. В этом
-                    месяце потрачено {byn(spent)} BYN.
+                    Кешбэк зависит от трат по карте за месяц: чем больше платишь картой, тем выше процент. В этом месяце
+                    потрачено {byn(spent)} BYN.
                 </span>
             </div>
             <div className="stack" style={{ gap: 8 }}>
@@ -233,9 +233,7 @@ function TeenCard({ game }: { game: GameState }) {
                         <div className="tier-swatch" style={{ background: fullBg(TIER_LOOKS[k]) }} />
                         <div className="grow">
                             <b>{t.n}</b>
-                            <span className="small">
-                                {t.min ? `от ${byn(t.min)} BYN трат в месяц` : 'без порога'}
-                            </span>
+                            <span className="small">{t.min ? `от ${byn(t.min)} BYN трат в месяц` : 'без порога'}</span>
                         </div>
                         {k <= ti && <span className="tier-tag">{k === ti ? 'сейчас' : 'пройден'}</span>}
                         <span className="tier-cb">{t.cb}%</span>

@@ -163,8 +163,7 @@ export const CARD_TIERS = [
 ] as const;
 
 /** Уровень карты по тратам за месяц (копейки BYN) */
-export const tierIndex = (spentMonth: number) =>
-    CARD_TIERS.reduce((acc, t, k) => (spentMonth >= t.min ? k : acc), 0);
+export const tierIndex = (spentMonth: number) => CARD_TIERS.reduce((acc, t, k) => (spentMonth >= t.min ? k : acc), 0);
 
 /** Вклады в BYN для подростка (условия в демо приблизительные) */
 export const TEEN_DEPOSITS = [
