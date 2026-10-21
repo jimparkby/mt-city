@@ -2922,6 +2922,31 @@ input {
     color: #ffb3dc;
 }
 
+.spend-tabs {
+    display: flex;
+    gap: 4px;
+    padding: 4px;
+    border-radius: 14px;
+    background: var(--surface);
+}
+
+.spend-tabs button {
+    flex: 1;
+    padding: 8px 0;
+    border-radius: 10px;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--n-700);
+    transition:
+        background 0.2s,
+        color 0.2s;
+}
+
+.spend-tabs button.on {
+    background: var(--surface-2);
+    color: var(--text);
+}
+
 .spend-ring {
     display: flex;
     gap: 16px;

@@ -15,7 +15,11 @@ interface Run {
     spent: Record<CatKey, number>;
     phase: 'play' | 'win' | 'lose';
     used: number;
+    history: MonthLog[];
 }
+
+/** Итог одного месяца для кольца трат */
+type MonthLog = Record<CatKey | 'gift' | 'left', number>;
 
 const fresh = (): Run => ({
     month: 1,
@@ -24,6 +28,7 @@ const fresh = (): Run => ({
     spent: { food: 0, clothes: 0, fun: 0 },
     phase: 'play',
     used: 0,
+    history: [],
 });
 
 const NAMES: Record<CatKey, string> = { food: 'Еда', clothes: 'Одежда', fun: 'Развлечения' };
@@ -39,7 +44,7 @@ const C = 2 * Math.PI * R;
 const GAP = 3;
 
 /** Кольцо трат за месяц, как в аналитике банка: сегмент на каждую категорию + остаток «отложу» */
-function SpendRing({ slices, spend }: { slices: Slice[]; spend: number }) {
+function SpendRing({ slices, spend, label }: { slices: Slice[]; spend: number; label: string }) {
     const total = slices.reduce((s, x) => s + x.value, 0) || 1;
     const shown = slices.filter((s) => s.value > 0);
     let offset = 0;
@@ -68,7 +73,7 @@ function SpendRing({ slices, spend }: { slices: Slice[]; spend: number }) {
                 </svg>
                 <div className="spend-ring-center">
                     <b>{spend}</b>
-                    <span>руб. траты</span>
+                    <span>{label}</span>
                 </div>
             </div>
             <div className="spend-ring-legend">
@@ -91,22 +96,34 @@ export function Dream() {
     const flash = useUi((s) => s.flash);
     const action = useGameAction();
     const [d, setD] = useState<Run>(fresh);
+    const [range, setRange] = useState<'month' | 'quarter'>('month');
 
-    const spend =
-        (d.picks.food ?? 0) +
-        (d.picks.clothes ?? 0) +
-        (d.picks.fun ?? 0) +
-        (d.month === DREAM.giftMonth ? DREAM.gift : 0);
+    const gift = d.month === DREAM.giftMonth ? DREAM.gift : 0;
+    const spend = (d.picks.food ?? 0) + (d.picks.clothes ?? 0) + (d.picks.fun ?? 0) + gift;
     const left = DREAM.allowance - spend;
     const can = d.picks.food != null && spend <= d.saved + DREAM.allowance;
     const playing = d.phase === 'play';
+
+    const current: MonthLog = {
+        food: d.picks.food ?? 0,
+        clothes: d.picks.clothes ?? 0,
+        fun: d.picks.fun ?? 0,
+        gift,
+        left: Math.max(left, 0),
+    };
+    // «3 месяца» — два прошлых месяца из истории плюс текущий выбор
+    const logs = range === 'month' ? [current] : [...d.history.slice(-2), current];
+    const sum = (k: keyof MonthLog) => logs.reduce((s, m) => s + m[k], 0);
     const slices: Slice[] = [
-        { name: NAMES.food, value: d.picks.food ?? 0, color: 'var(--yellow)' },
-        { name: NAMES.clothes, value: d.picks.clothes ?? 0, color: 'var(--accent-600)' },
-        { name: NAMES.fun, value: d.picks.fun ?? 0, color: 'var(--accent-2-700)' },
-        ...(d.month === DREAM.giftMonth ? [{ name: 'Подарок', value: DREAM.gift, color: '#a47bff' }] : []),
-        { name: 'Отложу', value: Math.max(left, 0), color: 'var(--green)' },
+        { name: NAMES.food, value: sum('food'), color: 'var(--yellow)' },
+        { name: NAMES.clothes, value: sum('clothes'), color: 'var(--accent-600)' },
+        { name: NAMES.fun, value: sum('fun'), color: 'var(--accent-2-700)' },
+        ...(sum('gift') ? [{ name: 'Подарок', value: sum('gift'), color: '#a47bff' }] : []),
+        { name: range === 'month' ? 'Отложу' : 'Отложено', value: sum('left'), color: 'var(--green)' },
     ];
+    const ringSpend = slices.slice(0, -1).reduce((s, x) => s + x.value, 0);
+    const ringLabel =
+        range === 'month' ? 'руб. траты' : logs.length === 1 ? 'руб. за 1 мес.' : `руб. за ${logs.length} мес.`;
 
     const next = () => {
         if (d.phase === 'win') {
@@ -122,9 +139,10 @@ export function Dream() {
             clothes: d.spent.clothes + (d.picks.clothes ?? 0),
             fun: d.spent.fun + (d.picks.fun ?? 0),
         };
-        if (saved >= DREAM.goal) return setD({ ...d, saved, spent, phase: 'win', used: d.month });
-        if (d.month === DREAM.months) return setD({ ...d, saved, spent, phase: 'lose' });
-        setD({ ...d, saved, spent, month: d.month + 1, picks: { food: null, clothes: 0, fun: 0 } });
+        const history = [...d.history, current];
+        if (saved >= DREAM.goal) return setD({ ...d, saved, spent, history, phase: 'win', used: d.month });
+        if (d.month === DREAM.months) return setD({ ...d, saved, spent, history, phase: 'lose' });
+        setD({ ...d, saved, spent, history, month: d.month + 1, picks: { food: null, clothes: 0, fun: 0 } });
     };
 
     const top = (Object.keys(d.spent) as CatKey[]).sort((a, b) => d.spent[b] - d.spent[a])[0];
@@ -179,7 +197,20 @@ export function Dream() {
                             <span>Родители дали на месяц</span>
                             <b className="pos">+{DREAM.allowance} руб.</b>
                         </div>
-                        <SpendRing slices={slices} spend={spend} />
+                        <div className="stack" style={{ gap: 8 }}>
+                            <div className="spend-tabs">
+                                <button className={range === 'month' ? 'on' : ''} onClick={() => setRange('month')}>
+                                    Месяц
+                                </button>
+                                <button
+                                    className={range === 'quarter' ? 'on' : ''}
+                                    onClick={() => setRange('quarter')}
+                                >
+                                    3 месяца
+                                </button>
+                            </div>
+                            <SpendRing slices={slices} spend={ringSpend} label={ringLabel} />
+                        </div>
                         {d.month === DREAM.giftMonth && (
                             <div className="event">
                                 <GiftIcon size={26} weight="duotone" />
