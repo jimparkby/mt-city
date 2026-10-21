@@ -68,15 +68,7 @@ export function Kopilka({ game }: { game: GameState }) {
     const flash = useUi((s) => s.flash);
     const action = useGameAction();
     const K = game.kop;
-    const patch = (p: Partial<KopPlan>) => action.mutate({ type: 'kop/set', patch: { ...p, planned: false } });
-    // Поля ввода держат своё значение: ответ демо-API приходит асинхронно, и иначе курсор прыгал бы
-    const [name, setName] = useState(K.name);
-    const [target, setTarget] = useState(String(K.target));
     const [range, setRange] = useState<1 | 3>(1);
-    const setGoal = (v: number) => {
-        setTarget(String(v));
-        patch({ target: v });
-    };
 
     const spend = K.food + K.fun + K.other;
     const free = K.income - spend;
@@ -95,9 +87,9 @@ export function Kopilka({ game }: { game: GameState }) {
         free <= 0
             ? 'Траты больше дохода — копить пока не из чего. Попробуй урезать развлечения или возьми ещё задание у мамы.'
             : !reach
-              ? 'Так цель не достигается и за 10 лет. Подними долю вклада или выбери цель поменьше.'
+              ? 'Так цель не достигается и за 10 лет. Попробуй тратить меньше или выбери цель поменьше.'
               : m > 12
-                ? 'Больше года — долго. Подними долю вклада или урежь одну статью трат, и срок заметно сократится.'
+                ? 'Больше года — долго. Урежь одну статью трат, и срок заметно сократится.'
                 : `Хороший план! Переводи ${money(invest)} BYN в Копилку в первый день месяца — так деньги не потратятся случайно.`;
 
     const at = (amt: number) => {
@@ -119,7 +111,6 @@ export function Kopilka({ game }: { game: GameState }) {
         ['fun', 'Развлечения', 'кино, игры, кафе', '#ffd23f', GameControllerIcon],
         ['other', 'Другое', 'проезд, подарки', '#7aa8ff', DotsThreeCircleIcon],
     ];
-    const interest = Math.max(0, bal - K.saved - invest * m);
 
     // Кольцо накоплений: уже отложено + сколько добавится в следующем месяце, остаток до цели — пустая дорожка
     const soon = Math.min(Math.max(0, K.target - K.saved), invest);
@@ -301,90 +292,6 @@ export function Kopilka({ game }: { game: GameState }) {
                 <div className="tip">
                     <LightbulbIcon size={24} weight="duotone" />
                     <span>{tip}</span>
-                </div>
-                <div className="stack" style={{ gap: 10 }}>
-                    <span className="h2">Настроить цель</span>
-                    <input
-                        className="text-input"
-                        value={name}
-                        onChange={(e) => {
-                            setName(e.target.value);
-                            patch({ name: e.target.value });
-                        }}
-                        placeholder="На что копишь?"
-                        maxLength={40}
-                    />
-                    <label className="text-input row" style={{ gap: 8 }}>
-                        <span className="small" style={{ fontSize: 14 }}>
-                            Сумма
-                        </span>
-                        <input
-                            type="number"
-                            min={1}
-                            value={target}
-                            onChange={(e) => {
-                                setTarget(e.target.value);
-                                const v = parseFloat(e.target.value.replace(',', '.')) || 0;
-                                patch({ target: Math.max(1, Math.min(100_000, v)) });
-                            }}
-                            className="bare-input num"
-                        />
-                        <b>BYN</b>
-                    </label>
-                    <div className="row" style={{ gap: 6 }}>
-                        {[50, 150, 300, 500].map((v) => (
-                            <button
-                                key={v}
-                                className={`seg-btn ${K.target === v ? 'on' : ''}`}
-                                onClick={() => setGoal(v)}
-                            >
-                                {v} BYN
-                            </button>
-                        ))}
-                    </div>
-                </div>
-                <div className="stack" style={{ gap: 8 }}>
-                    <span className="h2">Деньги в месяц</span>
-                    {rows.map(([k, label, sub, c, Ico]) => (
-                        <div key={k} className="card row" style={{ gap: 12, padding: '10px 12px' }}>
-                            <Ico size={26} weight="duotone" color={c} />
-                            <div className="stack grow" style={{ minWidth: 0, lineHeight: 1.25 }}>
-                                <b>{label}</b>
-                                <span className="tiny muted">{sub}</span>
-                            </div>
-                            <button
-                                className="step-btn small"
-                                onClick={() => patch({ [k]: Math.max(0, (K[k] as number) - 1) })}
-                            >
-                                −
-                            </button>
-                            <b className="num" style={{ minWidth: 52, textAlign: 'center' }}>
-                                {money(K[k] as number)}
-                            </b>
-                            <button className="step-btn small" onClick={() => patch({ [k]: (K[k] as number) + 1 })}>
-                                +
-                            </button>
-                        </div>
-                    ))}
-                    <div className="row" style={{ gap: 10, paddingTop: 4 }}>
-                        <span className="grow" style={{ fontSize: 14, color: 'var(--n-800)' }}>
-                            Сколько от остатка вкладывать
-                        </span>
-                        <div className="row" style={{ gap: 4 }}>
-                            {[50, 70, 100].map((v) => (
-                                <button
-                                    key={v}
-                                    className={`seg-btn share ${K.share === v ? 'on' : ''}`}
-                                    onClick={() => patch({ share: v })}
-                                >
-                                    {v}%
-                                </button>
-                            ))}
-                        </div>
-                    </div>
-                    <span className="tiny muted">
-                        Проценты Копилки добавят {money(interest)} BYN · ставка 8% годовых (демо)
-                    </span>
                 </div>
                 <button
                     className={`btn block tall ${K.planned ? 'ok' : ''}`}
