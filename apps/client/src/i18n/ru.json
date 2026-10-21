@@ -1,9 +1,9 @@
 {
-  "app.title": "МТ Сити",
+  "app.title": "Moby",
   "hud.balance": "MTcoin",
   "common.close": "Закрыть",
   "common.inProgress": "Экран в разработке",
-  "onboarding.title": "Привет, {name}! Добро пожаловать в МТ Сити",
+  "onboarding.title": "Привет, {name}! Добро пожаловать в Moby",
   "onboarding.choosePath": "С чего начнём?",
   "onboarding.business": "Открыть свой бизнес",
   "onboarding.job": "Устроиться на работу",

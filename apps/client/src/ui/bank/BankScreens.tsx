@@ -51,7 +51,7 @@ const useNotInDemo = () => {
     return () => flash('В демо этот раздел не работает', 'bankToast');
 };
 
-/** Открыть МТ Сити (для родителя — Moby Семья) */
+/** Открыть игру Moby (для родителя — Moby Семья) */
 const useToCity = () => {
     const goBank = useUi((s) => s.goBank);
     return () => goBank('city');
@@ -75,7 +75,8 @@ export function BankHome({ game }: { game: GameState }) {
     const reviewN = game.tasks.filter((t) => t.status === 'review').length;
     const decideN =
         game.ops.filter((o) => o.status === 'pending').length + game.requests.filter((r) => r.status === 'open').length;
-    const lastOp = game.ops[0];
+    // На главной — последняя проведённая операция: отклонённые и ждущие решения видны в истории
+    const lastOp = game.ops.find((o) => o.status === 'done');
     const c = game.controls;
     const weekDone = weekQuests(game).filter((q) => q.done).length;
     const famTeen = famChild === TEEN;
@@ -104,11 +105,11 @@ export function BankHome({ game }: { game: GameState }) {
     }
     const kidCard: HomeCard = teen
         ? {
-              kicker: `Moby Teen · кешбэк ${tier.cb}%`,
+              kicker: 'Moby Teen',
               value: `${byn(game.byn)} BYN`,
               art: fullBg(TIER_LOOKS[ti]),
               mark: 'MT',
-              tag: c.blocked ? 'Заблокирована' : next ? `до ${next.cb}%` : '',
+              tag: c.blocked ? 'Заблокирована' : `кешбэк ${tier.cb}%`,
               onTap: () => set({ page: 'card' }),
           }
         : {
@@ -131,7 +132,7 @@ export function BankHome({ game }: { game: GameState }) {
         ? [
               {
                   kicker: 'Prime Line EUR',
-                  value: '5.14 EUR',
+                  value: '5,14 EUR',
                   art: 'linear-gradient(135deg,#2a2d39,#0e0f14)',
                   mark: '',
                   tag: '',
@@ -139,7 +140,7 @@ export function BankHome({ game }: { game: GameState }) {
               },
               family
                   ? {
-                        kicker: `Детская карта · ${famChild.name}`,
+                        kicker: `Карта ${famChild.gen}`,
                         value: `${byn(game.byn)} BYN`,
                         art: famTeen ? fullBg(TIER_LOOKS[ti]) : fullBg(SKIN_LOOKS[game.skin]),
                         mark: 'MT',
@@ -159,8 +160,8 @@ export function BankHome({ game }: { game: GameState }) {
         : [
               kidCard,
               {
-                  kicker: `Копилка · ${game.kop.name}`,
-                  value: `${byn(Math.round(game.kop.saved * 100))} из ${byn(Math.round(game.kop.target * 100))} BYN`,
+                  kicker: `Копилка · ${Math.min(100, Math.round((game.kop.saved / game.kop.target) * 100))}%`,
+                  value: `${byn(Math.round(game.kop.saved * 100))} BYN`,
                   art: 'linear-gradient(135deg,#3ecf6e,#1d6b3a)',
                   mark: '',
                   tag: game.kop.planned ? '' : 'План',
@@ -175,7 +176,7 @@ export function BankHome({ game }: { game: GameState }) {
                                 : 'от 3% годовых',
                             art: 'linear-gradient(135deg,#ff9a3d 0%,#e0218a 100%)',
                             mark: '%',
-                            tag: game.deposits.length ? '' : 'Новое',
+                            tag: '',
                             onTap: () => set({ page: 'deposits' }),
                         },
                     ]
@@ -277,7 +278,7 @@ export function BankHome({ game }: { game: GameState }) {
                     </div>
                     <div className="stack grow" style={{ gap: 2, minWidth: 0 }}>
                         <span className="display" style={{ fontSize: 17 }}>
-                            МТ СИТИ
+                            MOBY
                         </span>
                         <span className="banner-sub">{banner}</span>
                     </div>
@@ -291,8 +292,8 @@ export function BankHome({ game }: { game: GameState }) {
                             {c.mark}
                         </div>
                         <div className="stack grow" style={{ minWidth: 0, lineHeight: 1.25 }}>
-                            <span className="home-card-kicker">{c.kicker}</span>
-                            <b className="num" style={{ fontSize: 19 }}>
+                            <span className="home-card-kicker ellipsis">{c.kicker}</span>
+                            <b className="num ellipsis" style={{ fontSize: 19 }}>
                                 {c.value}
                             </b>
                         </div>
@@ -355,7 +356,7 @@ export function BankProducts({ game }: { game: GameState }) {
                       title: 'Моя карта',
                       sub: teen
                           ? 'Moby Teen · кешбэк растёт с тратами по карте'
-                          : 'Moby Kids · дизайн из магазина МТ Сити',
+                          : 'Moby Kids · дизайн из магазина в игре',
                       Icon: CardsIcon,
                       go: () => set({ page: 'card' }),
                   },
@@ -392,7 +393,7 @@ export function BankProducts({ game }: { game: GameState }) {
                       Icon: StarIcon,
                       go: () => set({ page: 'partners' }),
                   },
-                  { title: 'МТ Сити', sub: 'Город, квесты и задания от мамы', Icon: BuildingsIcon, go: toCity },
+                  { title: 'Игра Moby', sub: 'Город, квесты и задания от мамы', Icon: BuildingsIcon, go: toCity },
               ];
 
     return (
@@ -460,7 +461,7 @@ export function BankMore() {
         ['Персональные данные', IdentificationCardIcon],
         ['Документы', FileTextIcon],
         ['Уведомления', BellIcon, true],
-        [isParent ? 'Moby Семья' : 'МТ Сити', isParent ? UsersThreeIcon : BuildingsIcon, false, true],
+        [isParent ? 'Moby Семья' : 'Moby', isParent ? UsersThreeIcon : BuildingsIcon, false, true],
         ['Курсы валют', CurrencyCircleDollarIcon],
         ['Банк на карте', MapPinIcon],
         ['О Банке', InfoIcon],
@@ -468,7 +469,11 @@ export function BankMore() {
     return (
         <div className="bank-scroll scroll pad-all" style={{ gap: 12 }}>
             {items.map(([label, Ico, badge, city]) => (
-                <button key={label} className={`more-row ${city ? 'city' : ''}`} onClick={city ? toCity : notInDemo}>
+                <button
+                    key={label}
+                    className={`more-row ${city ? 'game-row' : ''}`}
+                    onClick={city ? toCity : notInDemo}
+                >
                     <span className="more-icon">
                         <Ico size={26} weight={city && !isParent ? 'duotone' : 'regular'} />
                         {badge && <span className="dot-badge small">4</span>}
@@ -485,7 +490,7 @@ export function BankMore() {
 const BANK_NAV: [BankTab, string, Icon][] = [
     ['home', 'Главная', HouseIcon],
     ['products', 'Продукты', CardsIcon],
-    ['city', 'МТ Сити', BuildingsIcon],
+    ['city', 'Moby', BuildingsIcon],
     ['chat', 'Чат', ChatsIcon],
     ['more', 'Ещё', DotsThreeOutlineIcon],
 ];

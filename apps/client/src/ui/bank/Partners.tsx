@@ -61,7 +61,7 @@ export function Partners({ game }: { game: GameState }) {
                                 {p.city && (
                                     <span className="city-tag">
                                         <BuildingsIcon size={14} weight="duotone" />
-                                        есть в МТ Сити
+                                        есть в игре Moby
                                     </span>
                                 )}
                             </div>

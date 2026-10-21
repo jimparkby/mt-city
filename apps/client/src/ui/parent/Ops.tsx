@@ -134,10 +134,10 @@ export function OpsTab({ game }: { game: GameState }) {
             <div className="grid-2">
                 <div className="stat-tile">
                     <span>Потрачено за месяц</span>
-                    <b>{byn(game.spent.month)}</b>
+                    <b>{byn(game.spent.month)} BYN</b>
                 </div>
                 <div className="stat-tile">
-                    <span>Отклонено банком</span>
+                    <span>Отклонено покупок</span>
                     <b className={declined ? 'neg' : ''}>{declined}</b>
                 </div>
             </div>

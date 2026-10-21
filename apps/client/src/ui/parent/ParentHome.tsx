@@ -67,7 +67,7 @@ function FamilyCabinet({ game }: { game: GameState }) {
                             {child.name}, {child.age} лет
                         </b>
                         <span className="hero-text" style={{ fontSize: 13 }}>
-                            МТ Сити · уровень {game.level} · квесты {weekDone} из 5
+                            Moby · уровень {game.level} · квесты {weekDone} из 5
                         </span>
                     </div>
                 </div>

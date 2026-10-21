@@ -118,7 +118,7 @@ function NextStep({ game }: { game: GameState }) {
                 <Ico size={24} weight="duotone" />
             </div>
             <div className="grow">
-                <span className="next-kicker">{nx ? `${buildingById(nx.id).name} · шаг ${nx.k + 1}` : 'МТ Сити'}</span>
+                <span className="next-kicker">{nx ? `${buildingById(nx.id).name} · шаг ${nx.k + 1}` : 'Moby'}</span>
                 <span className="next-title">{nx ? nx.step.t : 'Все пути пройдены'}</span>
             </div>
             <button className="btn compact" onClick={() => nx && walkTo(nx.id)}>

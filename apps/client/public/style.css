@@ -424,6 +424,9 @@ input {
     width: 44px;
     height: 44px;
     flex: none;
+    display: flex;
+    align-items: center;
+    justify-content: center;
     border-radius: 14px;
     background: var(--surface-2);
     font-size: 20px;
@@ -1077,7 +1080,7 @@ input {
     background: var(--n-200);
 }
 
-.more-row.city {
+.more-row.game-row {
     box-shadow: inset 0 0 0 1.5px var(--accent);
 }
 
@@ -1094,7 +1097,7 @@ input {
     color: var(--accent-600);
 }
 
-.more-row.city .more-icon {
+.more-row.game-row .more-icon {
     color: var(--yellow);
 }
 
@@ -2080,6 +2083,11 @@ input {
 .bank-card > .bank-card-gloss {
     position: absolute;
     inset: 0;
+}
+
+/* Кешбэк — поверх карты справа, а не отдельной строкой внизу */
+.bank-card > .cashback {
+    position: absolute;
 }
 
 .bank-card-gloss {

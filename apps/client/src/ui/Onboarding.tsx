@@ -12,7 +12,7 @@ const STEPS: Record<Role, ObStep[]> = {
     kid: [
         {
             t: 'Привет, я Мони!',
-            d: 'Я помогу разобраться в МТ Сити. Здесь ты учишься обращаться с деньгами и получаешь за это награды.',
+            d: 'Я помогу разобраться в Moby. Здесь ты учишься обращаться с деньгами и получаешь за это награды.',
         },
         {
             t: 'Твой кошелёк',
@@ -40,7 +40,7 @@ const STEPS: Record<Role, ObStep[]> = {
     teen: [
         {
             t: 'Привет, я Мони!',
-            d: 'Я помогу разобраться в МТ Сити. Проходи пути в зданиях и учись обращаться с деньгами.',
+            d: 'Я помогу разобраться в Moby. Проходи пути в зданиях и учись обращаться с деньгами.',
         },
         {
             t: 'Твой кешбэк',
@@ -142,7 +142,7 @@ export function Onboarding({ phone }: { phone: RefObject<HTMLDivElement | null> 
                 <div className="ob-welcome">
                     <img src="/assets/moni.jpg" alt="Белка Мони" className="ob-moni" />
                     <div className="ob-welcome-head">
-                        <span className="ob-pill">МТ СИТИ · ОБУЧЕНИЕ</span>
+                        <span className="ob-pill">MOBY · ОБУЧЕНИЕ</span>
                         <span className="display" style={{ fontSize: 28, lineHeight: 1.1 }}>
                             {step.t}
                         </span>
