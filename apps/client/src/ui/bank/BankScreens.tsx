@@ -69,7 +69,7 @@ export function BankHome({ game }: { game: GameState }) {
     const isParent = role === 'parent',
         teen = role === 'teen';
     const child = teen ? TEEN : KID;
-    const ti = tierIndex(game.level),
+    const ti = tierIndex(game.spent.month),
         tier = CARD_TIERS[ti],
         next = CARD_TIERS[ti + 1];
     const reviewN = game.tasks.filter((t) => t.status === 'review').length;
@@ -90,7 +90,7 @@ export function BankHome({ game }: { game: GameState }) {
                 : 'Поставьте ребёнку новое задание'
         : teen
           ? next
-              ? `Ещё ${next.lvl - game.level} ур. — и кешбэк ${next.cb}% по карте`
+              ? `Потрать картой ещё ${byn(next.min - game.spent.month)} BYN — и кешбэк ${next.cb}%`
               : 'У тебя максимальный кешбэк 3%'
           : `Квесты недели ${weekDone} из 5 · в магазине новые вещи`;
 
@@ -353,7 +353,7 @@ export function BankProducts({ game }: { game: GameState }) {
             : [
                   {
                       title: 'Моя карта',
-                      sub: teen ? 'Moby Teen · кешбэк по уровню в МТ Сити' : 'Moby Kids · дизайн из магазина МТ Сити',
+                      sub: teen ? 'Moby Teen · кешбэк растёт с тратами по карте' : 'Moby Kids · дизайн из магазина МТ Сити',
                       Icon: CardsIcon,
                       go: () => set({ page: 'card' }),
                   },

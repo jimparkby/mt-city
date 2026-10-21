@@ -154,15 +154,17 @@ export const SHOP: Record<ShopCategory, Record<string, { name: string; price: nu
 export const isOwned = (s: GameState, cat: ShopCategory, id: string) =>
     SHOP[cat][id]?.price === 0 || s.owned.includes(`${cat}:${id}`);
 
-/** Уровни карты Moby Teen: кешбэк растёт с уровнем в МТ Сити */
+/** Уровни карты Moby Teen: чем больше трат по карте за месяц, тем выше кешбэк. min — копейки BYN */
 export const CARD_TIERS = [
-    { n: 'Старт', lvl: 1, cb: 0 },
-    { n: 'Бронза', lvl: 4, cb: 1 },
-    { n: 'Серебро', lvl: 6, cb: 2 },
-    { n: 'Золото', lvl: 8, cb: 3 },
+    { n: 'Старт', min: 0, cb: 0 },
+    { n: 'Бронза', min: 5_000, cb: 1 },
+    { n: 'Серебро', min: 10_000, cb: 2 },
+    { n: 'Золото', min: 20_000, cb: 3 },
 ] as const;
 
-export const tierIndex = (level: number) => CARD_TIERS.reduce((acc, t, k) => (level >= t.lvl ? k : acc), 0);
+/** Уровень карты по тратам за месяц (копейки BYN) */
+export const tierIndex = (spentMonth: number) =>
+    CARD_TIERS.reduce((acc, t, k) => (spentMonth >= t.min ? k : acc), 0);
 
 /** Вклады в BYN для подростка (условия в демо приблизительные) */
 export const TEEN_DEPOSITS = [
@@ -528,7 +530,7 @@ export function applyGameAction(s: GameState, a: GameAction): GameState {
         case 'kop/set':
             return { ...s, kop: { ...s.kop, ...a.patch } };
         default:
-            return applyFamily(s, a, CARD_TIERS[tierIndex(s.level)].cb);
+            return applyFamily(s, a, CARD_TIERS[tierIndex(s.spent.month)].cb);
     }
 }
 

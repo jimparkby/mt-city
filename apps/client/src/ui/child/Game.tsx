@@ -72,7 +72,7 @@ function TopHud({ game }: { game: GameState }) {
                     {teen ? (
                         <span title="Кешбэк по карте">
                             <PercentIcon size={18} weight="duotone" color="#3ecf6e" />
-                            {CARD_TIERS[tierIndex(game.level)].cb}%
+                            {CARD_TIERS[tierIndex(game.spent.month)].cb}%
                         </span>
                     ) : (
                         <span title="MTcoin">
@@ -131,12 +131,7 @@ function NextStep({ game }: { game: GameState }) {
 function LevelUp({ game }: { game: GameState }) {
     const teen = useTeen();
     const set = useUi((s) => s.set);
-    const tier = CARD_TIERS[tierIndex(game.level)];
-    const text = teen
-        ? tier.lvl === game.level && tier.cb > 0
-            ? `Карта прокачалась: кешбэк ${tier.cb}% на все покупки. В городе открылся Рынок.`
-            : 'В городе открылся Рынок.'
-        : 'В сундуке было 100 MTcoin. В городе открылся Рынок.';
+    const text = teen ? 'В городе открылся Рынок.' : 'В сундуке было 100 MTcoin. В городе открылся Рынок.';
     return (
         <div className="levelup">
             <span className="kicker light">НЕДЕЛЯ ЗАКРЫТА</span>

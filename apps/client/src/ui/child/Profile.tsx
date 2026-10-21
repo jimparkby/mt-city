@@ -1,4 +1,4 @@
-import { CARD_TIERS, SHOP, isOwned, tierIndex, weekQuests, type GameState, type ShopCategory } from '@mt/shared';
+import { CARD_TIERS, SHOP, isOwned, tierIndex, type GameState, type ShopCategory } from '@mt/shared';
 import {
     BaseballCapIcon,
     CheckIcon,
@@ -15,12 +15,12 @@ import {
 } from '@phosphor-icons/react';
 import { useGameAction } from '../../api/hooks';
 import { useUi, type ShopTab } from '../../store/ui';
-import { coins } from '../format';
+import { byn, coins } from '../format';
 import { KID, TEEN, useTeen } from '../roles';
 import { SKIN_LOOKS, TIER_LOOKS, avatarSVG, fullBg } from '../art/avatar';
 import { BankCard, MiniCard } from '../components/BankCard';
 
-/** Профиль: у ребёнка — персонаж и магазин за MTcoin, у подростка — уровни карты и кешбэк */
+/** Профиль: у ребёнка — персонаж и магазин за MTcoin, у подростка — уровни карты и кешбэк по тратам */
 export function Profile({ game }: { game: GameState }) {
     const teen = useTeen();
     const approved = game.tasks.filter((t) => t.status === 'paid').length;
@@ -189,13 +189,11 @@ function KidShop({ game }: { game: GameState }) {
 }
 
 function TeenCard({ game }: { game: GameState }) {
-    const ti = tierIndex(game.level);
+    const ti = tierIndex(game.spent.month);
     const tier = CARD_TIERS[ti];
     const next = CARD_TIERS[ti + 1];
-    const weekDone = weekQuests(game).filter((q) => q.done).length;
-    const pct = next
-        ? Math.min(100, Math.round(((game.level - tier.lvl + weekDone / 5) / (next.lvl - tier.lvl)) * 100))
-        : 100;
+    const spent = game.spent.month;
+    const pct = next ? Math.min(100, Math.round(((spent - tier.min) / (next.min - tier.min)) * 100)) : 100;
 
     return (
         <>
@@ -218,13 +216,14 @@ function TeenCard({ game }: { game: GameState }) {
                     style={{ justifyContent: 'space-between', alignItems: 'baseline', gap: '4px 8px' }}
                 >
                     <b style={{ fontSize: 15 }}>{next ? `Далее: ${next.cb}% · ${next.n}` : 'Максимальный кешбэк'}</b>
-                    {next && <span className="small nowrap">на уровне {next.lvl}</span>}
+                    {next && <span className="small nowrap">ещё {byn(next.min - spent)} BYN</span>}
                 </div>
                 <div className="progress">
                     <div style={{ width: `${pct}%` }} />
                 </div>
                 <span className="small">
-                    Кешбэк растёт вместе с уровнем в МТ Сити. Новый уровень даёт сундук недели — выполни 5 квестов.
+                    Кешбэк зависит от трат по карте за месяц: чем больше платишь картой, тем выше процент. В этом
+                    месяце потрачено {byn(spent)} BYN.
                 </span>
             </div>
             <div className="stack" style={{ gap: 8 }}>
@@ -234,7 +233,9 @@ function TeenCard({ game }: { game: GameState }) {
                         <div className="tier-swatch" style={{ background: fullBg(TIER_LOOKS[k]) }} />
                         <div className="grow">
                             <b>{t.n}</b>
-                            <span className="small">с уровня {t.lvl}</span>
+                            <span className="small">
+                                {t.min ? `от ${byn(t.min)} BYN трат в месяц` : 'без порога'}
+                            </span>
                         </div>
                         {k <= ti && <span className="tier-tag">{k === ti ? 'сейчас' : 'пройден'}</span>}
                         <span className="tier-cb">{t.cb}%</span>

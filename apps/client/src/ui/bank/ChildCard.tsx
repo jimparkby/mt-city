@@ -28,7 +28,7 @@ export function ChildCard({ game }: { game: GameState }) {
     const [confirmLost, setConfirmLost] = useState(false);
     const c = game.controls;
     const child = teen ? TEEN : KID;
-    const ti = tierIndex(game.level);
+    const ti = tierIndex(game.spent.month);
     const tail = childCardTail(game);
     const toast = (m: string) => flash(m, 'bankToast');
     const dayLeft = Math.max(0, c.dayLimit - game.spent.day);

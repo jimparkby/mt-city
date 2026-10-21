@@ -360,7 +360,7 @@ export function checkPurchase(s: GameState, m: Merchant, teen = false): { status
     return { status: 'done' };
 }
 
-/** Списание и начисления по проведённой покупке: семейные баллы у партнёров, кешбэк подростка по уровню */
+/** Списание и начисления по проведённой покупке: семейные баллы у партнёров, кешбэк подростка по тратам */
 function settle(s: GameState, m: Merchant, teenCb: number, who: Member): GameState {
     const partner = PARTNERS.find((p) => p.id === m.partner);
     const childPts = partner ? Math.round((m.amt * partner.cb) / 100) : 0;
@@ -390,7 +390,7 @@ function settle(s: GameState, m: Merchant, teenCb: number, who: Member): GameSta
     };
 }
 
-/** Кешбэк по уровню карты Moby Teen передаёт вызывающий: он знает уровень (см. CARD_TIERS) */
+/** Кешбэк карты Moby Teen передаёт вызывающий: он зависит от трат за месяц (см. CARD_TIERS) */
 export function applyFamily(s: GameState, a: FamilyAction, teenCb: number): GameState {
     switch (a.type) {
         case 'pkg/issue': {

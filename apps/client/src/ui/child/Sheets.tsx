@@ -20,7 +20,7 @@ function WeekSheet({ game }: { game: GameState }) {
     const action = useGameAction();
     const quests = weekQuests(game);
     const done = quests.filter((q) => q.done).length;
-    const prize = teen ? `уровень ${game.level + 1} и рост кешбэка по карте` : `уровень ${game.level + 1} и 100 MTcoin`;
+    const prize = teen ? `уровень ${game.level + 1} и новые здания в городе` : `уровень ${game.level + 1} и 100 MTcoin`;
 
     return (
         <Sheet>
