@@ -56,6 +56,7 @@ function TopHud({ game }: { game: GameState }) {
     const teen = useTeen();
     const tab = useUi((s) => s.tab);
     const openSheet = useUi((s) => s.openSheet);
+    const set = useUi((s) => s.set);
     const quests = weekQuests(game);
     const done = quests.filter((q) => q.done).length;
     const child = teen ? TEEN : KID;
@@ -63,7 +64,18 @@ function TopHud({ game }: { game: GameState }) {
     return (
         <div className="hud-top">
             <div className="hero" data-ob="wallet">
-                <div className="hero-avatar">{child.name[0]}</div>
+                {isStandalone ? (
+                    <button
+                        className="hero-avatar"
+                        aria-label="Сменить возраст"
+                        title="Сменить возраст"
+                        onClick={() => set({ ageChosen: false })}
+                    >
+                        {child.name[0]}
+                    </button>
+                ) : (
+                    <div className="hero-avatar">{child.name[0]}</div>
+                )}
                 <div className="hero-name">
                     <b>{child.name}</b>
                     <span>уровень {game.level}</span>

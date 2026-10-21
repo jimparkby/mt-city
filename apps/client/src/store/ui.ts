@@ -27,6 +27,8 @@ type ToastKey = 'toast' | 'parentToast' | 'bankToast';
 
 interface UiState {
     role: Role;
+    /** Отдельная игра: возраст выбран на стартовом экране */
+    ageChosen: boolean;
     bankTab: BankTab;
     tab: GameTab;
     sheet: Sheet | null;
@@ -48,6 +50,8 @@ interface UiState {
     bankToast: string | null;
 
     setRole: (role: Role) => void;
+    /** Отдельная игра: выбрать возраст и начать */
+    pickAge: (role: Role) => void;
     goBank: (tab: BankTab) => void;
     setTab: (tab: GameTab) => void;
     openSheet: (sheet: Sheet) => void;
@@ -69,6 +73,7 @@ const STORE_KEY = isStandalone ? 'moby-game:ui:v1' : 'mt-city:ui:v7';
 
 interface Saved {
     role: Role;
+    ageChosen: boolean;
     bankTab: BankTab;
     onboarded: Partial<Record<Role, boolean>>;
 }
@@ -99,8 +104,8 @@ const transient = {
 export const useUi = create<UiState>((set, get) => {
     const saved = loadSaved();
     return {
-        // В отдельной игре всегда играет ребёнок 7–13
-        role: isStandalone ? 'kid' : (saved.role ?? 'kid'),
+        role: saved.role ?? 'kid',
+        ageChosen: !isStandalone || !!saved.ageChosen,
         bankTab: saved.bankTab ?? 'home',
         hideBalance: false,
         parentTab: 'tasks',
@@ -112,6 +117,7 @@ export const useUi = create<UiState>((set, get) => {
 
         setRole: (role) =>
             set({ role, sheet: null, overlay: null, loc: null, step: null, obStep: 0, page: null, bankSheet: null }),
+        pickAge: (role) => set({ ...transient, role, ageChosen: true }),
         goBank: (bankTab) => set({ bankTab, sheet: null, page: null, bankSheet: null }),
         setTab: (tab) => set({ tab, sheet: null, loc: null, step: null }),
         openSheet: (sheet) => set({ sheet }),
@@ -151,6 +157,7 @@ export const useUi = create<UiState>((set, get) => {
 useUi.subscribe((s) => {
     const saved: Saved = {
         role: s.role,
+        ageChosen: s.ageChosen,
         bankTab: s.bankTab,
         onboarded: s.onboarded,
     };

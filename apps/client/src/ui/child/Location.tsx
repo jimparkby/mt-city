@@ -139,6 +139,14 @@ export function Location({ game }: { game: GameState }) {
                         </div>
                     )}
                 </div>
+                {cur >= 0 && (
+                    <button
+                        className="btn block tall location-cta"
+                        onClick={() => openStep({ loc, k: cur, picked: null })}
+                    >
+                        Начать шаг {cur + 1} · {steps[cur].t}
+                    </button>
+                )}
             </div>
             {step && <StepSheet game={game} />}
         </div>

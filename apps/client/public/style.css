@@ -678,6 +678,58 @@ input {
     padding-bottom: var(--safe-bottom);
 }
 
+.age-pick {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    padding: 24px 20px;
+    text-align: center;
+    background: radial-gradient(120% 70% at 50% 0%, #2f6bf0 0%, #0f1a46 70%);
+    color: #fff;
+}
+
+.age-title {
+    font-size: 30px;
+    line-height: 1.15;
+}
+
+.age-sub {
+    max-width: 320px;
+    margin-bottom: 18px;
+    opacity: 0.8;
+}
+
+.age-card {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    width: 100%;
+    padding: 18px 20px;
+    border-radius: 20px;
+    border: 2px solid rgba(255, 255, 255, 0.14);
+    background: rgba(255, 255, 255, 0.08);
+    color: #fff;
+    text-align: left;
+}
+
+.age-card b {
+    font-family: var(--font-display);
+    font-size: 22px;
+}
+
+.age-card span {
+    font-size: 14px;
+    opacity: 0.8;
+}
+
+.age-card.on {
+    border-color: #7aa8ff;
+}
+
 .statusbar {
     height: 44px;
     flex: none;
@@ -2433,6 +2485,16 @@ input {
     gap: 4px;
     font-size: 13px;
     font-weight: 700;
+}
+
+.location-cta {
+    position: sticky;
+    bottom: 0;
+    flex: none;
+    margin-top: 4px;
+    justify-content: center;
+    text-align: center;
+    box-shadow: 0 0 0 18px var(--bg);
 }
 
 .all-done {
