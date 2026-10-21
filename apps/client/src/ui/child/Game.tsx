@@ -21,6 +21,7 @@ import { CityMap } from './CityMap';
 import { STEP_ICONS, nextStep } from './steps';
 import { Dream } from './Dream';
 import { Location } from './Location';
+import { MiniGame } from './MiniGame';
 import { Profile } from './Profile';
 import { ChildSheets } from './Sheets';
 import { Tasks } from './Tasks';
@@ -47,6 +48,7 @@ export function Game({ game }: { game: GameState }) {
             <ChildSheets game={game} />
             {overlay === 'dream' && <Dream />}
             {overlay === 'levelup' && <LevelUp game={game} />}
+            {overlay === 'mini' && <MiniGame game={game} />}
             {toast && <div className="toast game-toast">{toast}</div>}
         </div>
     );

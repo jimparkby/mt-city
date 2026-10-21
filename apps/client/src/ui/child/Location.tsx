@@ -1,4 +1,5 @@
-import { PATHS, isStepDone, pathSteps, stepStatuses, type GameState } from '@mt/shared';
+import { Fragment, useState } from 'react';
+import { PATHS, checkOpenAnswer, isStepDone, pathSteps, stepStatuses, type GameState } from '@mt/shared';
 import {
     CaretLeftIcon,
     CheckCircleIcon,
@@ -19,7 +20,14 @@ import { buildingById, locationArt } from '../art/city';
 import { LocationExtras } from './LocationExtras';
 import { STEP_ICONS } from './steps';
 
-const KIND_LABEL = { lesson: 'Урок', quiz: 'Квиз', sim: 'Симуляция', work: 'Работа' } as const;
+const KIND_LABEL = {
+    lesson: 'Урок',
+    quiz: 'Квиз',
+    sim: 'Симуляция',
+    work: 'Работа',
+    open: 'Вопрос',
+    game: 'Мини-игра',
+} as const;
 
 /** Награда шага: ребёнку — MTcoin, подростку — знания */
 function useReward() {
@@ -85,49 +93,56 @@ export function Location({ game }: { game: GameState }) {
                 </div>
             </div>
             <div className="location-body scroll">
-                <Bubble kicker="КАК ЗДЕСЬ ВСЁ УСТРОЕНО">{path.tip}</Bubble>
+                <Bubble kicker="КАК ЗДЕСЬ ВСЁ УСТРОЕНО">{(teen && path.tipTeen) || path.tip}</Bubble>
                 {!isStandalone && <LocationExtras game={game} loc={loc} />}
                 <div className="timeline">
                     {steps.map((p, k) => {
                         const st = stats[k];
                         const Ico = st === 'done' ? CheckIcon : st === 'locked' ? LockSimpleIcon : STEP_ICONS[p.kind];
+                        const head = p.block && p.block !== steps[k - 1]?.block;
                         return (
-                            <button
-                                key={k}
-                                className={`tl-step ${st} ${k === steps.length - 1 ? 'last' : ''}`}
-                                onClick={() =>
-                                    st === 'locked'
-                                        ? flash(`Сначала пройди «${steps[cur].t}»`)
-                                        : openStep({ loc, k, picked: null })
-                                }
-                            >
-                                <div className="tl-rail">
-                                    <div className="tl-dot">
-                                        <Ico weight={st === 'done' ? 'bold' : 'duotone'} />
+                            <Fragment key={k}>
+                                {head && <span className="tl-block">{p.block}</span>}
+                                <button
+                                    className={`tl-step ${st} ${k === steps.length - 1 ? 'last' : ''}`}
+                                    onClick={() =>
+                                        st === 'locked'
+                                            ? flash(`Сначала пройди «${steps[cur].t}»`)
+                                            : openStep({ loc, k, picked: null })
+                                    }
+                                >
+                                    <div className="tl-rail">
+                                        <div className="tl-dot">
+                                            <Ico weight={st === 'done' ? 'bold' : 'duotone'} />
+                                        </div>
+                                        <div className="tl-line" />
                                     </div>
-                                    <div className="tl-line" />
-                                </div>
-                                <div className="tl-text">
-                                    <span className="tl-kicker">
-                                        Шаг {k + 1} · {KIND_LABEL[p.kind]}
-                                    </span>
-                                    <span className="tl-title">{p.t}</span>
-                                    <span
-                                        className="tl-reward"
-                                        style={{
-                                            color:
-                                                st === 'locked' ? undefined : st === 'done' ? '#3ecf6e' : reward.color,
-                                        }}
-                                    >
-                                        {st === 'done' ? (
-                                            <CheckIcon size={15} weight="bold" />
-                                        ) : (
-                                            <reward.Icon size={15} weight="duotone" />
-                                        )}
-                                        {st === 'done' ? 'получено' : `+${p.r}${reward.unit}`}
-                                    </span>
-                                </div>
-                            </button>
+                                    <div className="tl-text">
+                                        <span className="tl-kicker">
+                                            Шаг {k + 1} · {KIND_LABEL[p.kind]}
+                                        </span>
+                                        <span className="tl-title">{p.t}</span>
+                                        <span
+                                            className="tl-reward"
+                                            style={{
+                                                color:
+                                                    st === 'locked'
+                                                        ? undefined
+                                                        : st === 'done'
+                                                          ? '#3ecf6e'
+                                                          : reward.color,
+                                            }}
+                                        >
+                                            {st === 'done' ? (
+                                                <CheckIcon size={15} weight="bold" />
+                                            ) : (
+                                                <reward.Icon size={15} weight="duotone" />
+                                            )}
+                                            {st === 'done' ? 'получено' : `+${p.r}${reward.unit}`}
+                                        </span>
+                                    </div>
+                                </button>
+                            </Fragment>
                         );
                     })}
                     {doneN === steps.length && (
@@ -148,7 +163,7 @@ export function Location({ game }: { game: GameState }) {
                     </button>
                 )}
             </div>
-            {step && <StepSheet game={game} />}
+            {step && <StepSheet key={`${step.loc}:${step.k}`} game={game} />}
         </div>
     );
 }
@@ -176,8 +191,12 @@ function StepSheet({ game }: { game: GameState }) {
     const flash = useUi((s) => s.flash);
     const action = useGameAction();
     const reward = useReward();
+    const set = useUi((s) => s.set);
+    const [typed, setTyped] = useState('');
+    const [checked, setChecked] = useState<boolean | null>(null);
 
     const p = pathSteps(step.loc, teen)[step.k];
+    const numeric = !!p.answers?.every((a) => /^\d+$/.test(a));
     const done = isStepDone(game, step.loc, step.k);
     const pk = step.picked;
     const quiz = p.kind === 'quiz';
@@ -193,8 +212,24 @@ function StepSheet({ game }: { game: GameState }) {
         act: () => void,
         tone = '',
         disabled = false;
-    if (done && p.kind !== 'sim') [btn, act, tone] = ['Пройдено · закрыть', close, 'ghost'];
-    else if (p.kind === 'sim')
+    if (done && p.kind !== 'sim' && p.kind !== 'game') [btn, act, tone] = ['Пройдено · закрыть', close, 'ghost'];
+    else if (p.kind === 'game')
+        [btn, act] = [
+            done ? 'Сыграть ещё раз' : 'Начать игру',
+            () => {
+                close();
+                set({ mini: { loc: step.loc, k: step.k }, overlay: 'mini' });
+            },
+        ];
+    else if (p.kind === 'open') {
+        if (checked) [btn, act, tone] = [`Забрать +${p.r}${reward.unit}`, complete, 'ok'];
+        else
+            [btn, act, disabled] = [
+                'Проверить',
+                () => setChecked(checkOpenAnswer(p.answers ?? [], typed)),
+                !typed.trim(),
+            ];
+    } else if (p.kind === 'sim')
         [btn, act] = [
             done ? 'Сыграть ещё раз' : 'Начать квест',
             () => {
@@ -224,9 +259,45 @@ function StepSheet({ game }: { game: GameState }) {
                 </div>
                 <span className="display sheet-title">{p.t}</span>
                 <Bubble small>{p.say}</Bubble>
+                {p.text && (
+                    <div className="theory">
+                        {p.text.map((x, i) => (
+                            <p key={i}>
+                                {x.h && <b>{x.h}. </b>}
+                                {x.p}
+                            </p>
+                        ))}
+                    </div>
+                )}
+                {p.kind === 'open' && !done && (
+                    <>
+                        <span className="question" style={{ whiteSpace: 'pre-line' }}>
+                            {p.q}
+                        </span>
+                        <input
+                            className={`answer-input ${checked === false ? 'bad' : checked ? 'ok' : ''}`}
+                            value={typed}
+                            placeholder={numeric ? 'Число, например 1 500 000' : 'Твой ответ'}
+                            inputMode={numeric ? 'numeric' : 'text'}
+                            readOnly={!!checked}
+                            onChange={(e) => {
+                                setTyped(e.target.value);
+                                setChecked(null);
+                            }}
+                            onKeyDown={(e) => e.key === 'Enter' && !disabled && act()}
+                        />
+                        {checked != null && (
+                            <div className={`why ${checked ? 'ok' : 'bad'}`}>
+                                {checked ? `Верно! ${p.why}` : `Пока не так. Подсказка: ${p.hint}`}
+                            </div>
+                        )}
+                    </>
+                )}
                 {quiz && !done && (
                     <>
-                        <span className="question">{p.q}</span>
+                        <span className="question" style={{ whiteSpace: 'pre-line' }}>
+                            {p.q}
+                        </span>
                         <div className="stack" style={{ gap: 8 }}>
                             {p.opts!.map((label, i) => {
                                 const sel = pk === i,

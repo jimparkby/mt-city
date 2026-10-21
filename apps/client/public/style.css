@@ -2497,6 +2497,17 @@ input {
     box-shadow: 0 0 0 18px var(--bg);
 }
 
+.tl-block {
+    margin: 14px 0 10px;
+    font-family: var(--font-display);
+    font-size: 15px;
+    color: #a9c6ff;
+}
+
+.tl-block:first-child {
+    margin-top: 0;
+}
+
 .all-done {
     display: flex;
     align-items: center;
@@ -2605,6 +2616,85 @@ input {
 
 .option.bad svg {
     color: var(--accent-2-700);
+}
+
+.theory {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    font-size: 15px;
+    line-height: 1.5;
+}
+
+.theory p {
+    margin: 0;
+}
+
+.theory b {
+    color: #a9c6ff;
+}
+
+.answer-input {
+    min-height: 50px;
+    padding: 12px 14px;
+    border-radius: 14px;
+    border: 2px solid var(--surface);
+    background: var(--surface);
+    font-size: 16px;
+    font-weight: 600;
+    outline: none;
+}
+
+.answer-input:focus {
+    border-color: var(--accent);
+}
+
+.answer-input.ok {
+    border-color: var(--green);
+}
+
+.answer-input.bad {
+    border-color: var(--accent-2);
+}
+
+.mini-legend {
+    padding: 12px 14px;
+    border-radius: 16px;
+    background: rgba(47, 107, 240, 0.16);
+    font-size: 14px;
+    line-height: 1.45;
+}
+
+.mini-case {
+    padding: 12px 14px;
+    border-radius: 16px;
+    background: var(--surface);
+    font-size: 15px;
+    line-height: 1.5;
+    white-space: pre-line;
+}
+
+.mini-finale {
+    align-items: center;
+    text-align: center;
+    gap: 10px;
+    padding-top: 24px;
+}
+
+.mini-finale > svg {
+    color: var(--yellow);
+}
+
+.panel-pick.red b {
+    color: #ff7a8a;
+}
+
+.panel-pick.yellow b {
+    color: var(--yellow);
+}
+
+.panel-pick.green b {
+    color: var(--green);
 }
 
 .why {

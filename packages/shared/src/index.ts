@@ -5,4 +5,5 @@ export * from './types.js';
 export * from './catalog.js';
 export * from './game.js';
 export * from './paths.js';
+export * from './stadium.js';
 export * from './family.js';

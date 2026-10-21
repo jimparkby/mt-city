@@ -1,11 +1,21 @@
 import { LOC_ORDER, pathSteps, stepStatuses, type GameState } from '@mt/shared';
-import { BookOpenIcon, CoffeeIcon, HeadphonesIcon, QuestionIcon, type Icon } from '@phosphor-icons/react';
+import {
+    BookOpenIcon,
+    CoffeeIcon,
+    GameControllerIcon,
+    HeadphonesIcon,
+    PencilSimpleLineIcon,
+    QuestionIcon,
+    type Icon,
+} from '@phosphor-icons/react';
 
 export const STEP_ICONS: Record<string, Icon> = {
     lesson: BookOpenIcon,
     quiz: QuestionIcon,
     sim: HeadphonesIcon,
     work: CoffeeIcon,
+    open: PencilSimpleLineIcon,
+    game: GameControllerIcon,
 };
 
 /** Первый непройденный шаг по порядку зданий */

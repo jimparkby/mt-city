@@ -1,7 +1,9 @@
 // Пути в зданиях города (макет «MT City v7 Roles»): у каждого здания 5 коротких задач, отдельно для 7–13 и 14–17 лет.
 // Ребёнок 7–13 получает за шаг MTcoin, подросток 14–17 — очки знаний (игровой валюты у него нет).
 
-export type StepKind = 'lesson' | 'quiz' | 'sim' | 'work';
+import { STADIUM_TEEN, STADIUM_TIP, type MiniGameId } from './stadium.js';
+
+export type StepKind = 'lesson' | 'quiz' | 'sim' | 'work' | 'open' | 'game';
 
 export interface PathStep {
     t: string;
@@ -14,12 +16,23 @@ export interface PathStep {
     /** Индекс правильного ответа */
     a?: number;
     why?: string;
+    /** Раздел пути: шаги одного блока идут под общим заголовком */
+    block?: string;
+    /** Теория урока: абзацы с подзаголовками */
+    text?: { h?: string; p: string }[];
+    /** Открытый вопрос: принятые ответы (число или корень слова) и подсказка */
+    answers?: string[];
+    hint?: string;
+    /** Мини-игра шага */
+    game?: MiniGameId;
 }
 
 export interface LocationPath {
     /** Цвет фона шапки локации */
     c: string;
     tip: string;
+    /** Своя подсказка для 14–17 лет, если путь у них другой */
+    tipTeen?: string;
     kid: PathStep[];
     teen: PathStep[];
 }
@@ -407,46 +420,8 @@ const RAW: Record<string, { c: string; topic: string; tip: string; kid: RawQuiz[
                 2,
             ],
         ],
-        teen: [
-            [
-                '360 BYN за полгода',
-                'Ты планируешь накопить 360 BYN за 6 месяцев. Какова ежемесячная сумма?',
-                ['50 BYN', '60 BYN', '70 BYN'],
-                1,
-            ],
-            [
-                '35% на экипировку',
-                'У тебя 200 BYN накоплений. Ты потратил 35% на спортивную экипировку. Сколько осталось?',
-                ['130 BYN', '165 BYN', '70 BYN'],
-                0,
-            ],
-            [
-                'Цель или покупка',
-                'Как лучше поступить, если ты копишь на соревнования, но хочешь купить дорогую вещь прямо сейчас?',
-                [
-                    'Всегда брать кредит',
-                    'Сравнить приоритеты и влияние покупки на срок достижения цели',
-                    'Отказаться от планирования',
-                ],
-                1,
-            ],
-            [
-                '50% за месяц',
-                'Тебе предлагают вложить деньги с обещанием гарантированной прибыли 50% за месяц. Какое решение разумнее?',
-                [
-                    'Вложить все сбережения',
-                    'Взять кредит для увеличения вложения',
-                    'Проверить предложение и помнить, что высокая доходность связана с риском',
-                ],
-                2,
-            ],
-            [
-                'Накопления за год',
-                'Ты можешь откладывать 40 BYN ежемесячно. Сколько накопишь за год без учёта процентов?',
-                ['480 BYN', '400 BYN', '520 BYN'],
-                0,
-            ],
-        ],
+        // Для 14–17 лет Стадион собран из методички — см. stadium.ts
+        teen: [],
     },
     med: {
         c: '#7a1466',
@@ -851,7 +826,13 @@ export const PATHS: Record<string, LocationPath> = {
     ...Object.fromEntries(
         Object.entries(RAW).map(([id, d]) => [
             id,
-            { c: d.c, tip: d.tip, kid: quizzes(d.topic, d.kid, 15), teen: quizzes(d.topic, d.teen, 20) },
+            {
+                c: d.c,
+                tip: d.tip,
+                kid: quizzes(d.topic, d.kid, 15),
+                teen: id === 'stadium' ? STADIUM_TEEN : quizzes(d.topic, d.teen, 20),
+                ...(id === 'stadium' && { tipTeen: STADIUM_TIP }),
+            },
         ]),
     ),
     green: {

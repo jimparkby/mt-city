@@ -8,7 +8,7 @@ export type BankTab = 'home' | 'products' | 'city' | 'chat' | 'more';
 /** Вкладки игры */
 export type GameTab = 'city' | 'tasks' | 'profile';
 export type Sheet = { type: 'week' } | { type: 'building'; id: string };
-export type Overlay = 'dream' | 'levelup';
+export type Overlay = 'dream' | 'levelup' | 'mini';
 /** Экран Moby поверх вкладки: продукты ребёнка, карта, партнёры */
 export type Page = 'deposits' | 'kopilka' | 'card' | 'partners' | 'subs';
 /** Шторки Moby у ребёнка: демо-оплата и просьба к родителю */
@@ -38,6 +38,8 @@ interface UiState {
     step: StepOpen | null;
     /** Запрос «дойти до здания»: город ведёт туда персонажа и открывает локацию */
     walk: { id: string; n: number } | null;
+    /** Шаг пути, чья мини-игра открыта поверх города */
+    mini: { loc: string; k: number } | null;
     page: Page | null;
     bankSheet: BankSheet | null;
     parentTab: ParentTab;
@@ -96,6 +98,7 @@ const transient = {
     loc: null,
     step: null,
     walk: null,
+    mini: null,
     page: null,
     bankSheet: null,
     obStep: 0,
