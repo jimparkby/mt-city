@@ -2922,6 +2922,95 @@ input {
     color: #ffb3dc;
 }
 
+.spend-ring {
+    display: flex;
+    gap: 16px;
+    align-items: center;
+    padding: 14px;
+    border-radius: 20px;
+    background: var(--surface);
+}
+
+.spend-ring-chart {
+    position: relative;
+    width: 128px;
+    height: 128px;
+    flex: none;
+}
+
+.spend-ring-chart svg {
+    width: 100%;
+    height: 100%;
+    transform: rotate(-90deg);
+}
+
+.spend-ring-chart circle {
+    fill: none;
+    stroke-width: 14;
+    transition:
+        stroke-dasharray 0.4s ease,
+        stroke-dashoffset 0.4s ease;
+}
+
+.spend-ring-chart .spend-ring-track {
+    stroke: var(--n-200);
+}
+
+.spend-ring-center {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+}
+
+.spend-ring-center b {
+    font-family: var(--font-display);
+    font-size: 22px;
+    line-height: 1.1;
+}
+
+.spend-ring-center span {
+    font-size: 11px;
+    color: var(--n-700);
+}
+
+.spend-ring-legend {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    font-size: 13px;
+}
+
+.spend-ring-legend > div {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    transition: opacity 0.2s;
+}
+
+.spend-ring-legend > div.off {
+    opacity: 0.4;
+}
+
+.spend-ring-legend i {
+    width: 10px;
+    height: 10px;
+    flex: none;
+    border-radius: 50%;
+}
+
+.spend-ring-legend span {
+    flex: 1;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
 .pick-grid {
     display: grid;
     grid-template-columns: repeat(3, minmax(0, 1fr));

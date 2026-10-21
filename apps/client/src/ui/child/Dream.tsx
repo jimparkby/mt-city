@@ -28,6 +28,62 @@ const fresh = (): Run => ({
 
 const NAMES: Record<CatKey, string> = { food: 'Еда', clothes: 'Одежда', fun: 'Развлечения' };
 
+interface Slice {
+    name: string;
+    value: number;
+    color: string;
+}
+
+const R = 46;
+const C = 2 * Math.PI * R;
+const GAP = 3;
+
+/** Кольцо трат за месяц, как в аналитике банка: сегмент на каждую категорию + остаток «отложу» */
+function SpendRing({ slices, spend }: { slices: Slice[]; spend: number }) {
+    const total = slices.reduce((s, x) => s + x.value, 0) || 1;
+    const shown = slices.filter((s) => s.value > 0);
+    let offset = 0;
+    return (
+        <div className="spend-ring">
+            <div className="spend-ring-chart">
+                <svg viewBox="0 0 120 120">
+                    <circle cx="60" cy="60" r={R} className="spend-ring-track" />
+                    {shown.map((s) => {
+                        const len = (s.value / total) * C;
+                        const dash = Math.max(len - (shown.length > 1 ? GAP : 0), 0.5);
+                        const el = (
+                            <circle
+                                key={s.name}
+                                cx="60"
+                                cy="60"
+                                r={R}
+                                stroke={s.color}
+                                strokeDasharray={`${dash} ${C - dash}`}
+                                strokeDashoffset={-offset}
+                            />
+                        );
+                        offset += len;
+                        return el;
+                    })}
+                </svg>
+                <div className="spend-ring-center">
+                    <b>{spend}</b>
+                    <span>руб. траты</span>
+                </div>
+            </div>
+            <div className="spend-ring-legend">
+                {slices.map((s) => (
+                    <div key={s.name} className={s.value ? '' : 'off'}>
+                        <i style={{ background: s.color }} />
+                        <span>{s.name}</span>
+                        <b>{s.value}</b>
+                    </div>
+                ))}
+            </div>
+        </div>
+    );
+}
+
 /** Квест «Накопи на мечту»: 5 месяцев, 200 руб. в месяц, нужно отложить 500 на наушники */
 export function Dream() {
     const teen = useTeen();
@@ -44,6 +100,13 @@ export function Dream() {
     const left = DREAM.allowance - spend;
     const can = d.picks.food != null && spend <= d.saved + DREAM.allowance;
     const playing = d.phase === 'play';
+    const slices: Slice[] = [
+        { name: NAMES.food, value: d.picks.food ?? 0, color: 'var(--yellow)' },
+        { name: NAMES.clothes, value: d.picks.clothes ?? 0, color: 'var(--accent-600)' },
+        { name: NAMES.fun, value: d.picks.fun ?? 0, color: 'var(--accent-2-700)' },
+        ...(d.month === DREAM.giftMonth ? [{ name: 'Подарок', value: DREAM.gift, color: '#a47bff' }] : []),
+        { name: 'Отложу', value: Math.max(left, 0), color: 'var(--green)' },
+    ];
 
     const next = () => {
         if (d.phase === 'win') {
@@ -116,6 +179,7 @@ export function Dream() {
                             <span>Родители дали на месяц</span>
                             <b className="pos">+{DREAM.allowance} руб.</b>
                         </div>
+                        <SpendRing slices={slices} spend={spend} />
                         {d.month === DREAM.giftMonth && (
                             <div className="event">
                                 <GiftIcon size={26} weight="duotone" />
