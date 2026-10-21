@@ -10,14 +10,17 @@ import {
     GameControllerIcon,
     HamburgerIcon,
     LightbulbIcon,
-    MapPinIcon,
     NumberOneIcon,
     NumberThreeIcon,
     NumberTwoIcon,
+    PiggyBankIcon,
+    WalletIcon,
+    CalendarPlusIcon,
     type Icon,
 } from '@phosphor-icons/react';
 import { useGameAction } from '../../api/hooks';
 import { useUi } from '../../store/ui';
+import { Ring, type RingSlice } from '../components/Ring';
 
 /** Ставка Копилки в демо: 8% годовых, проценты капитализируются раз в месяц */
 const RATE = 0.08 / 12;
@@ -37,6 +40,14 @@ const MONTHS_TO = [
 ];
 
 const money = (v: number) => (Math.round(v * 100) / 100).toFixed(2).replace('.', ',');
+const pctOf = (v: number, total: number) => (total > 0 ? Math.round((v / total) * 100) : 0);
+
+/** Строка под кольцом: сегмент кольца + подпись в списке */
+interface Part extends RingSlice {
+    name: string;
+    sub: string;
+    icon: Icon;
+}
 
 function monthsWord(m: number) {
     if (m % 10 === 1 && m % 100 !== 11) return 'месяц';
@@ -61,6 +72,7 @@ export function Kopilka({ game }: { game: GameState }) {
     // Поля ввода держат своё значение: ответ демо-API приходит асинхронно, и иначе курсор прыгал бы
     const [name, setName] = useState(K.name);
     const [target, setTarget] = useState(String(K.target));
+    const [range, setRange] = useState<1 | 3>(1);
     const setGoal = (v: number) => {
         setTarget(String(v));
         patch({ target: v });
@@ -109,6 +121,66 @@ export function Kopilka({ game }: { game: GameState }) {
     ];
     const interest = Math.max(0, bal - K.saved - invest * m);
 
+    // Кольцо накоплений: уже отложено + сколько добавится в следующем месяце, остаток до цели — пустая дорожка
+    const soon = Math.min(Math.max(0, K.target - K.saved), invest);
+    const saveSlices: Part[] = [
+        {
+            key: 'saved',
+            name: 'Накоплено',
+            sub: 'уже в Копилке',
+            value: K.saved,
+            color: '#3ecf6e',
+            icon: PiggyBankIcon,
+        },
+        {
+            key: 'soon',
+            name: 'Через месяц',
+            sub: 'по твоему плану',
+            value: soon,
+            color: '#a8f0bf',
+            icon: CalendarPlusIcon,
+        },
+    ];
+    const leftSlice: Part = {
+        key: 'left',
+        name: 'Осталось до цели',
+        sub: K.name,
+        value: Math.max(0, K.target - K.saved - soon),
+        color: '#80859a',
+        icon: FlagCheckeredIcon,
+    };
+
+    // Кольцо трат: доход делится на траты, вклад в Копилку и свободный остаток
+    const spendSlices: Part[] = [
+        ...rows
+            .filter(([k]) => k !== 'income')
+            .map(([k, name, sub, color, icon]) => ({
+                key: k,
+                name,
+                sub,
+                value: (K[k] as number) * range,
+                color,
+                icon,
+            })),
+        {
+            key: 'invest',
+            name: 'В Копилку',
+            sub: `${K.share}% от остатка`,
+            value: invest * range,
+            color: '#3ecf6e',
+            icon: PiggyBankIcon,
+        },
+        {
+            key: 'free',
+            name: 'Свободно',
+            sub: 'остаётся на руках',
+            value: Math.max(0, free - invest) * range,
+            color: '#80859a',
+            icon: WalletIcon,
+        },
+    ];
+    const spendTotal = spendSlices.reduce((s, x) => s + x.value, 0);
+
     return (
         <div className="bank-page kopilka scroll">
             <div className="page-bar">
@@ -133,49 +205,51 @@ export function Kopilka({ game }: { game: GameState }) {
                 </div>
             </div>
 
-            <div className="road">
-                <div className="road-finish">
-                    <div className="flag" />
-                    <span>ФИНИШ</span>
-                </div>
-                {miles.map(([p, kicker, Ico]) => {
-                    const r = at(K.target * p);
-                    const next = p === nextP;
-                    const state = r.ok ? 'ok' : next ? 'next' : '';
-                    return (
-                        <div key={p} className={`mile ${state}`}>
-                            <div className="lane">
-                                <div className="lane-dash" />
-                                <div className="mile-dot">
-                                    {r.ok ? <CheckIcon weight="bold" /> : <Ico weight="bold" />}
+            <div className="stack" style={{ padding: '18px 16px 28px', gap: 22 }}>
+                <div className="stack" style={{ gap: 12 }}>
+                    <span className="h2">Накопления</span>
+                    <Ring slices={saveSlices} total={K.target}>
+                        <b>{money(K.saved)} BYN</b>
+                        <span>из {money(K.target)} BYN</span>
+                    </Ring>
+                    <div className="spend-list">
+                        {saveSlices.concat(leftSlice).map((s) => (
+                            <div key={s.key} className="spend-row">
+                                <span className="spend-ico" style={{ color: s.color }}>
+                                    <s.icon size={22} weight="fill" />
+                                </span>
+                                <span className="spend-name">
+                                    <b>{s.name}</b>
+                                    <span>{s.sub}</span>
+                                </span>
+                                <span className="spend-sum">
+                                    <b>{money(s.value)} BYN</b>
+                                    <span>{pctOf(s.value, K.target)}%</span>
+                                </span>
+                            </div>
+                        ))}
+                    </div>
+                    <div className="spend-list">
+                        {[...miles].reverse().map(([p, kicker, Ico]) => {
+                            const r = at(K.target * p);
+                            const color = r.ok ? '#3ecf6e' : p === nextP ? '#7aa8ff' : '#80859a';
+                            return (
+                                <div key={p} className="spend-row">
+                                    <span className="spend-ico" style={{ color }}>
+                                        {r.ok ? <CheckIcon size={20} weight="bold" /> : <Ico size={20} weight="bold" />}
+                                    </span>
+                                    <span className="spend-name">
+                                        <b>{kicker}</b>
+                                        <span>{r.when}</span>
+                                    </span>
+                                    <span className="spend-sum">
+                                        <b>{money(K.target * p)} BYN</b>
+                                    </span>
                                 </div>
-                            </div>
-                            <div className="mile-link" />
-                            <div className="mile-card">
-                                <span className="mile-kicker">{kicker}</span>
-                                <b className="num">{money(K.target * p)} BYN</b>
-                                <span className="mile-when">{r.when}</span>
-                            </div>
-                        </div>
-                    );
-                })}
-                <div className="mile here">
-                    <div className="lane start">
-                        <div className="lane-dash" />
-                        <div className="mile-dot">
-                            <MapPinIcon weight="fill" />
-                        </div>
-                    </div>
-                    <div className="mile-link" />
-                    <div className="mile-card">
-                        <span className="mile-kicker">ТЫ ЗДЕСЬ</span>
-                        <b className="num">{money(K.saved)} BYN</b>
-                        <span className="mile-when">+{money(invest)} BYN каждый месяц</span>
+                            );
+                        })}
                     </div>
                 </div>
-            </div>
-
-            <div className="stack" style={{ padding: '22px 16px 28px', gap: 22 }}>
                 <div className="goal-when">
                     <div className="goal-icon">
                         <CalendarCheckIcon size={28} weight="duotone" />
@@ -188,22 +262,40 @@ export function Kopilka({ game }: { game: GameState }) {
                         {reach && m > 0 && <span className="tiny">{byMonth(m - 1)} г.</span>}
                     </div>
                 </div>
-                <div className="grid-2">
-                    <div className="stat-tile">
-                        <span>Трачу в месяц</span>
-                        <b>{money(spend)}</b>
+                <div className="stack" style={{ gap: 12 }}>
+                    <span className="h2">Траты</span>
+                    <div className="spend-tabs">
+                        <button className={range === 1 ? 'on' : ''} onClick={() => setRange(1)}>
+                            Месяц
+                        </button>
+                        <button className={range === 3 ? 'on' : ''} onClick={() => setRange(3)}>
+                            3 месяца
+                        </button>
                     </div>
-                    <div className="stat-tile">
-                        <span>Остаётся</span>
-                        <b className={free > 0 ? 'pos' : 'neg'}>{money(free)}</b>
+                    <Ring slices={spendSlices}>
+                        <b>{money(spend * range)} BYN</b>
+                        <span>{range === 1 ? 'траты в месяц' : 'траты за 3 месяца'}</span>
+                    </Ring>
+                    <div className="row" style={{ justifyContent: 'space-between', fontSize: 15 }}>
+                        <span>Доход {range === 1 ? 'в месяц' : 'за 3 месяца'}</span>
+                        <b className="pos">+{money(K.income * range)} BYN</b>
                     </div>
-                    <div className="stat-tile ring">
-                        <span>Вкладываю</span>
-                        <b style={{ color: 'var(--accent-700)' }}>{money(invest)}</b>
-                    </div>
-                    <div className="stat-tile">
-                        <span>Свободно</span>
-                        <b>{money(Math.max(0, free - invest))}</b>
+                    <div className="spend-list">
+                        {spendSlices.map((s) => (
+                            <div key={s.key} className="spend-row">
+                                <span className="spend-ico" style={{ color: s.color }}>
+                                    <s.icon size={22} weight="fill" />
+                                </span>
+                                <span className="spend-name">
+                                    <b>{s.name}</b>
+                                    <span>{s.sub}</span>
+                                </span>
+                                <span className="spend-sum">
+                                    <b>{money(s.value)} BYN</b>
+                                    <span>{pctOf(s.value, spendTotal)}%</span>
+                                </span>
+                            </div>
+                        ))}
                     </div>
                 </div>
                 <div className="tip">
