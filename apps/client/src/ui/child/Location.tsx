@@ -1,6 +1,7 @@
 import { Fragment, useState } from 'react';
 import { PATHS, checkOpenAnswer, isStepDone, pathSteps, stepStatuses, type GameState } from '@mt/shared';
 import {
+    CaretDownIcon,
     CaretLeftIcon,
     CheckCircleIcon,
     CheckIcon,
@@ -168,6 +169,32 @@ export function Location({ game }: { game: GameState }) {
     );
 }
 
+/** Теория урока: вводный абзац виден сразу, разделы раскрываются по стрелке */
+function Theory({ text }: { text: { h?: string; p: string }[] }) {
+    const [open, setOpen] = useState<number[]>([]);
+    const toggle = (i: number) => setOpen((o) => (o.includes(i) ? o.filter((x) => x !== i) : [...o, i]));
+
+    return (
+        <div className="theory">
+            {text.map((x, i) =>
+                x.h ? (
+                    <div key={i} className={`theory-item ${open.includes(i) ? 'open' : ''}`}>
+                        <button className="theory-head" aria-expanded={open.includes(i)} onClick={() => toggle(i)}>
+                            <span className="grow">{x.h}</span>
+                            <CaretDownIcon size={20} weight="bold" />
+                        </button>
+                        <div className="theory-body">
+                            <p>{x.p}</p>
+                        </div>
+                    </div>
+                ) : (
+                    <p key={i}>{x.p}</p>
+                ),
+            )}
+        </div>
+    );
+}
+
 function Bubble({ kicker, children, small }: { kicker?: string; children: string; small?: boolean }) {
     return (
         <div className="bubble-row">
@@ -259,16 +286,7 @@ function StepSheet({ game }: { game: GameState }) {
                 </div>
                 <span className="display sheet-title">{p.t}</span>
                 <Bubble small>{p.say}</Bubble>
-                {p.text && (
-                    <div className="theory">
-                        {p.text.map((x, i) => (
-                            <p key={i}>
-                                {x.h && <b>{x.h}. </b>}
-                                {x.p}
-                            </p>
-                        ))}
-                    </div>
-                )}
+                {p.text && <Theory text={p.text} />}
                 {p.kind === 'open' && !done && (
                     <>
                         <span className="question" style={{ whiteSpace: 'pre-line' }}>
