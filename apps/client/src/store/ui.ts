@@ -1,4 +1,5 @@
 import { create } from 'zustand';
+import { isStandalone } from '../api/client';
 
 /** Демо-роли из макета v7: ребёнок 7–13 (MTcoin), подросток 14–17 (кешбэк), родитель (Moby Семья) */
 export type Role = 'kid' | 'teen' | 'parent';
@@ -64,7 +65,7 @@ interface UiState {
     resetUi: () => void;
 }
 
-const STORE_KEY = 'mt-city:ui:v7';
+const STORE_KEY = isStandalone ? 'moby-game:ui:v1' : 'mt-city:ui:v7';
 
 interface Saved {
     role: Role;
@@ -98,7 +99,8 @@ const transient = {
 export const useUi = create<UiState>((set, get) => {
     const saved = loadSaved();
     return {
-        role: saved.role ?? 'kid',
+        // В отдельной игре всегда играет ребёнок 7–13
+        role: isStandalone ? 'kid' : (saved.role ?? 'kid'),
         bankTab: saved.bankTab ?? 'home',
         hideBalance: false,
         parentTab: 'tasks',

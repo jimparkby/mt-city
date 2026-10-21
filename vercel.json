@@ -3,5 +3,6 @@
   "framework": null,
   "installCommand": "npm install",
   "buildCommand": "npm run build -w @mt/shared && npm run build -w client",
-  "outputDirectory": "apps/client/dist"
+  "outputDirectory": "apps/client/dist",
+  "cleanUrls": true
 }

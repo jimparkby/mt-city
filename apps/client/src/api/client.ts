@@ -3,7 +3,9 @@ import { useSession } from '../store/session';
 
 /** Адрес сервера. Не задан → демо-режим: всё считается в браузере (src/api/demo.ts), сервер и БД не нужны. */
 const BASE = import.meta.env.VITE_API_URL;
-export const isDemoMode = !BASE;
+/** Отдельная браузерная игра (game.html): без Moby и сервера, прогресс хранится в браузере */
+export const isStandalone = typeof window !== 'undefined' && !!(window as { __STANDALONE__?: boolean }).__STANDALONE__;
+export const isDemoMode = !BASE || isStandalone;
 
 export class ApiRequestError extends Error {
     constructor(

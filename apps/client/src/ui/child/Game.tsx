@@ -12,7 +12,7 @@ import {
     type Icon,
 } from '@phosphor-icons/react';
 import { moby } from '../../moby';
-import { isDemoMode } from '../../api/client';
+import { isDemoMode, isStandalone } from '../../api/client';
 import { useUi, type GameTab } from '../../store/ui';
 import { byn, coins } from '../format';
 import { KID, TEEN, useTeen } from '../roles';
@@ -118,7 +118,9 @@ function NextStep({ game }: { game: GameState }) {
                 <Ico size={24} weight="duotone" />
             </div>
             <div className="grow">
-                <span className="next-kicker">{nx ? `${buildingById(nx.id).name} · шаг ${nx.k + 1}` : 'Moby'}</span>
+                <span className="next-kicker">
+                    {nx ? `${buildingById(nx.id).name} · шаг ${nx.k + 1}` : isStandalone ? 'Город' : 'Moby'}
+                </span>
                 <span className="next-title">{nx ? nx.step.t : 'Все пути пройдены'}</span>
             </div>
             <button className="btn compact" onClick={() => nx && walkTo(nx.id)}>

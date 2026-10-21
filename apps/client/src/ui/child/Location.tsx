@@ -10,6 +10,7 @@ import {
     TrophyIcon,
     XCircleIcon,
 } from '@phosphor-icons/react';
+import { isStandalone } from '../../api/client';
 import { useGameAction } from '../../api/hooks';
 import { useUi } from '../../store/ui';
 import { useTeen } from '../roles';
@@ -85,7 +86,7 @@ export function Location({ game }: { game: GameState }) {
             </div>
             <div className="location-body scroll">
                 <Bubble kicker="КАК ЗДЕСЬ ВСЁ УСТРОЕНО">{path.tip}</Bubble>
-                <LocationExtras game={game} loc={loc} />
+                {!isStandalone && <LocationExtras game={game} loc={loc} />}
                 <div className="timeline">
                     {steps.map((p, k) => {
                         const st = stats[k];

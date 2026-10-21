@@ -33,9 +33,10 @@ import {
     type TransactionDto,
 } from '@mt/shared';
 import type { z } from 'zod';
-import { ApiRequestError } from './client';
+import { ApiRequestError, isStandalone } from './client';
 
-const KEY = 'mt-city:demo-state:v9';
+// У отдельной игры свой прогресс, не смешанный с демо Moby
+const KEY = isStandalone ? 'moby-game:state:v1' : 'mt-city:demo-state:v9';
 const DAY_MS = DAY_MS_DEFAULT;
 
 interface DemoState {
